@@ -949,6 +949,17 @@ class CyclesMeshSettings(bpy.types.PropertyGroup):
                 min=0.1, max=1000.0,
                 default=1.0,
                 )
+        cls.preview_dicing_rate = FloatProperty(
+                name="Preview Dicing Rate",
+                description="Width of a micropolygon in pixels during preview render",
+                min=0.1, max=1000.0,
+                default=8.0,
+                )
+        cls.preview_displacement = BoolProperty(
+                name="Preview Displacement",
+                description="Use subdivision in preview render",
+                default=True,
+                )
 
     @classmethod
     def unregister(cls):

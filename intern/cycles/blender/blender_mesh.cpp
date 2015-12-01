@@ -660,13 +660,14 @@ static void create_subd_mesh(Scene *scene,
                              BL::Object b_ob,
                              BL::Mesh& b_mesh,
                              PointerRNA *cmesh,
-                             const vector<uint>& used_shaders)
+                             const vector<uint>& used_shaders,
+                             bool preview)
 {
 	Mesh *basemesh = new Mesh();
 	create_mesh(scene, basemesh, b_mesh, used_shaders);
 
 	SubdParams sdparams(mesh, used_shaders[0], true, false);
-	sdparams.dicing_rate = RNA_float_get(cmesh, "dicing_rate");
+	sdparams.dicing_rate = preview ? RNA_float_get(cmesh, "preview_dicing_rate") : RNA_float_get(cmesh, "dicing_rate");
 
 	scene->camera->update();
 	sdparams.camera = scene->camera;
@@ -784,8 +785,11 @@ Mesh *BlenderSync::sync_mesh(BL::Object& b_ob,
 
 		if(b_mesh) {
 			if(render_layer.use_surfaces && !hide_tris) {
-				if(cmesh.data && experimental && RNA_enum_get(&cmesh, "subdivision_type") != 0)
-					create_subd_mesh(scene, mesh, b_ob, b_mesh, &cmesh, used_shaders);
+				if(cmesh.data && experimental && RNA_enum_get(&cmesh, "subdivision_type") != 0 &&
+						(!preview || RNA_boolean_get(&cmesh, "preview_displacement")))
+				{
+					create_subd_mesh(scene, mesh, b_ob, b_mesh, &cmesh, used_shaders, preview);
+				}
 				else
 					create_mesh(scene, mesh, b_mesh, used_shaders);
 
