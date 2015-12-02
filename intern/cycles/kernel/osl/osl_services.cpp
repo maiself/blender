@@ -76,6 +76,7 @@ ustring OSLRenderServices::u_raster("raster");
 ustring OSLRenderServices::u_ndc("NDC");
 ustring OSLRenderServices::u_object_location("object:location");
 ustring OSLRenderServices::u_object_index("object:index");
+ustring OSLRenderServices::u_object_displacement_scale("object:displacement_scale");
 ustring OSLRenderServices::u_geom_dupli_generated("geom:dupli_generated");
 ustring OSLRenderServices::u_geom_dupli_uv("geom:dupli_uv");
 ustring OSLRenderServices::u_material_index("material:index");
@@ -601,6 +602,10 @@ bool OSLRenderServices::get_object_standard_attribute(KernelGlobals *kg, ShaderD
 	}
 	else if(name == u_object_index) {
 		float f = object_pass_id(kg, sd->object);
+		return set_attribute_float(f, type, derivatives, val);
+	}
+	else if(name == u_object_displacement_scale) {
+		float f = object_displacement_scale(kg, sd->object);
 		return set_attribute_float(f, type, derivatives, val);
 	}
 	else if(name == u_geom_dupli_generated) {

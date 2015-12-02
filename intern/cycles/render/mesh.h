@@ -108,6 +108,8 @@ public:
 	uint motion_steps;
 	bool use_motion_blur;
 
+	float displacement_scale;
+
 	/* Update Flags */
 	bool need_update;
 	bool need_update_rebuild;

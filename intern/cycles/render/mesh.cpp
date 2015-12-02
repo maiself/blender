@@ -88,6 +88,8 @@ Mesh::Mesh()
 	motion_steps = 3;
 	use_motion_blur = false;
 
+	displacement_scale = 1.0f;
+
 	bvh = NULL;
 
 	tri_offset = 0;

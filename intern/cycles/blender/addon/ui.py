@@ -687,6 +687,7 @@ class Cycles_PT_mesh_displacement(CyclesButtonsPanel, Panel):
         sub = col.column()
         sub.label(text="Displacment:")
         sub.prop(cdata, "displacement_method", text="")
+        sub.prop(cdata, "displacement_scale", text="Scale")
 
         col = split.column()
         sub = col.column(align=True)
