@@ -785,6 +785,8 @@ Mesh *BlenderSync::sync_mesh(BL::Object& b_ob,
 
 		if(b_mesh) {
 			if(render_layer.use_surfaces && !hide_tris) {
+				mesh->displacement_scale = RNA_float_get(&cmesh, "displacement_scale");
+
 				if(cmesh.data && experimental && RNA_enum_get(&cmesh, "subdivision_type") != 0 &&
 						(!preview || RNA_boolean_get(&cmesh, "preview_displacement")))
 				{

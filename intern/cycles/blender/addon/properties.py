@@ -937,6 +937,12 @@ class CyclesMeshSettings(bpy.types.PropertyGroup):
                 items=enum_displacement_methods,
                 default='BUMP',
                 )
+        cls.displacement_scale = FloatProperty(
+                name="Displacement Scale",
+                description="",
+                min=-1000, max=1000.0,
+                default=1.0,
+                )
         cls.subdivision_type = EnumProperty(
                 name="Subdivision Type",
                 description="Type of subdivision to use",
