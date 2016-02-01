@@ -334,40 +334,6 @@ void DiagSplit::split_triangle(Patch *patch)
 	limit_edge_factors(sub_split, ef_split, 1 << params.max_level);
 
 	split(sub_split, ef_split);
-
-	TriangleDice dice(params);
-
-	for(size_t i = 0; i < subpatches_triangle.size(); i++) {
-		TriangleDice::SubPatch& sub = subpatches_triangle[i];
-		TriangleDice::EdgeFactors& ef = edgefactors_triangle[i];
-
-		ef.tu = max(ef.tu, 1);
-		ef.tv = max(ef.tv, 1);
-		ef.tw = max(ef.tw, 1);
-
-		dice.dice(sub, ef);
-	}
-
-	subpatches_triangle.clear();
-	edgefactors_triangle.clear();
-
-	/* triangle might be split into quads so dice quad subpatches as well */
-	QuadDice qdice(params);
-
-	for(size_t i = 0; i < subpatches_quad.size(); i++) {
-		QuadDice::SubPatch& sub = subpatches_quad[i];
-		QuadDice::EdgeFactors& ef = edgefactors_quad[i];
-
-		ef.tu0 = max(ef.tu0, 1);
-		ef.tu1 = max(ef.tu1, 1);
-		ef.tv0 = max(ef.tv0, 1);
-		ef.tv1 = max(ef.tv1, 1);
-
-		qdice.dice(sub, ef);
-	}
-
-	subpatches_quad.clear();
-	edgefactors_quad.clear();
 }
 
 void DiagSplit::split_quad(Patch *patch)
@@ -389,23 +355,6 @@ void DiagSplit::split_quad(Patch *patch)
 	limit_edge_factors(sub_split, ef_split, 1 << params.max_level);
 
 	split(sub_split, ef_split);
-
-	QuadDice dice(params);
-
-	for(size_t i = 0; i < subpatches_quad.size(); i++) {
-		QuadDice::SubPatch& sub = subpatches_quad[i];
-		QuadDice::EdgeFactors& ef = edgefactors_quad[i];
-
-		ef.tu0 = max(ef.tu0, 1);
-		ef.tu1 = max(ef.tu1, 1);
-		ef.tv0 = max(ef.tv0, 1);
-		ef.tv1 = max(ef.tv1, 1);
-
-		dice.dice(sub, ef);
-	}
-
-	subpatches_quad.clear();
-	edgefactors_quad.clear();
 }
 
 CCL_NAMESPACE_END
