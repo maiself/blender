@@ -532,12 +532,13 @@ static void attr_create_pointiness(Scene *scene,
 static void create_mesh(Scene *scene,
                         Mesh *mesh,
                         BL::Mesh& b_mesh,
-                        const vector<uint>& used_shaders)
+                        const vector<uint>& used_shaders,
+                        bool subdivision=false)
 {
 	/* count vertices and faces */
 	int numverts = b_mesh.vertices.length();
 	int numfaces = b_mesh.tessfaces.length();
-	int numtris = 0;
+	int numtris = 0, numpatches = 0;
 	bool use_loop_normals = b_mesh.use_auto_smooth();
 
 	BL::Mesh::vertices_iterator v;
@@ -545,11 +546,14 @@ static void create_mesh(Scene *scene,
 
 	for(b_mesh.tessfaces.begin(f); f != b_mesh.tessfaces.end(); ++f) {
 		int4 vi = get_int4(f->vertices_raw());
-		numtris += (vi[3] == 0)? 1: 2;
+		if(!subdivision)
+			numtris += (vi[3] == 0)? 1: 2;
+		else
+			numpatches++;
 	}
 
 	/* reserve memory */
-	mesh->reserve(numverts, numtris, 0, 0);
+	mesh->reserve(numverts, numtris, 0, 0, numpatches);
 
 	/* create vertex coordinates and normals */
 	int i = 0;
@@ -613,24 +617,33 @@ static void create_mesh(Scene *scene,
 			}
 		}
 
-		/* create triangles */
-		if(n == 4) {
-			if(is_zero(cross(mesh->verts[vi[1]] - mesh->verts[vi[0]], mesh->verts[vi[2]] - mesh->verts[vi[0]])) ||
-			   is_zero(cross(mesh->verts[vi[2]] - mesh->verts[vi[0]], mesh->verts[vi[3]] - mesh->verts[vi[0]])))
-			{
-				// TODO(mai): order here is probably wrong
-				mesh->set_triangle(ti++, vi[0], vi[1], vi[3], shader, smooth, true);
-				mesh->set_triangle(ti++, vi[2], vi[3], vi[1], shader, smooth, true);
-				face_flags[fi] |= FACE_FLAG_DIVIDE_24;
+		if(!subdivision) {
+			/* create triangles */
+			if(n == 4) {
+				if(is_zero(cross(mesh->verts[vi[1]] - mesh->verts[vi[0]], mesh->verts[vi[2]] - mesh->verts[vi[0]])) ||
+				   is_zero(cross(mesh->verts[vi[2]] - mesh->verts[vi[0]], mesh->verts[vi[3]] - mesh->verts[vi[0]])))
+				{
+					// TODO(mai): order here is probably wrong
+					mesh->set_triangle(ti++, vi[0], vi[1], vi[3], shader, smooth, true);
+					mesh->set_triangle(ti++, vi[2], vi[3], vi[1], shader, smooth, true);
+					face_flags[fi] |= FACE_FLAG_DIVIDE_24;
+				}
+				else {
+					mesh->set_triangle(ti++, vi[0], vi[1], vi[2], shader, smooth, true);
+					mesh->set_triangle(ti++, vi[0], vi[2], vi[3], shader, smooth, true);
+					face_flags[fi] |= FACE_FLAG_DIVIDE_13;
+				}
 			}
-			else {
-				mesh->set_triangle(ti++, vi[0], vi[1], vi[2], shader, smooth, true);
-				mesh->set_triangle(ti++, vi[0], vi[2], vi[3], shader, smooth, true);
-				face_flags[fi] |= FACE_FLAG_DIVIDE_13;
-			}
+			else
+				mesh->set_triangle(ti++, vi[0], vi[1], vi[2], shader, smooth, false);
 		}
-		else
-			mesh->set_triangle(ti++, vi[0], vi[1], vi[2], shader, smooth, false);
+		else {
+			/* create patches */
+			if(n == 4)
+				mesh->set_patch(ti++, vi[0], vi[1], vi[2], vi[3], shader, smooth);
+			else
+				mesh->set_patch(ti++, vi[0], vi[1], vi[2], -1, shader, smooth);
+		}
 
 		nverts[fi] = n;
 	}
@@ -664,7 +677,7 @@ static void create_subd_mesh(Scene *scene,
                              bool preview)
 {
 	Mesh *basemesh = new Mesh();
-	create_mesh(scene, basemesh, b_mesh, used_shaders);
+	create_mesh(scene, basemesh, b_mesh, used_shaders, true);
 
 	SubdParams sdparams(mesh, used_shaders[0], true, false);
 	sdparams.dicing_rate = preview ? RNA_float_get(cmesh, "preview_dicing_rate") : RNA_float_get(cmesh, "dicing_rate");
@@ -767,6 +780,8 @@ Mesh *BlenderSync::sync_mesh(BL::Object& b_ob,
 	 * adjustments in dynamic BVH - other methods could probably do this better*/
 	vector<float4> oldcurve_keys = mesh->curve_keys;
 
+	vector<Mesh::SubPatch> oldsubpatches = mesh->subpatches;
+
 	mesh->clear();
 	mesh->used_shaders = used_shaders;
 	mesh->name = ustring(b_ob_data.name().c_str());
@@ -842,6 +857,17 @@ Mesh *BlenderSync::sync_mesh(BL::Object& b_ob,
 	else if(oldcurve_keys.size()) {
 		if(memcmp(&oldcurve_keys[0], &mesh->curve_keys[0], sizeof(float4)*oldcurve_keys.size()) != 0)
 			rebuild = true;
+	}
+
+	if(oldsubpatches.size() != mesh->subpatches.size())
+		rebuild = true;
+	else if(oldsubpatches.size()) {
+		for(int i = 0; i < oldsubpatches.size(); i++) {
+			if(oldsubpatches[i] != mesh->subpatches[i]) {
+				rebuild = true;
+				break;
+			}
+		}
 	}
 	
 	mesh->tag_update(scene, rebuild);

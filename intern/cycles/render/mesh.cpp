@@ -35,9 +35,6 @@
 #include "util_progress.h"
 #include "util_set.h"
 
-#include "../subd/subd_split.h"
-#include "../subd/subd_patch.h"
-
 CCL_NAMESPACE_BEGIN
 
 /* Triangle */
@@ -110,7 +107,7 @@ Mesh::~Mesh()
 	delete bvh;
 }
 
-void Mesh::reserve(int numverts, int numtris, int numcurves, int numcurvekeys)
+void Mesh::reserve(int numverts, int numtris, int numcurves, int numcurvekeys, int numpatches)
 {
 	/* reserve space to add verts and triangles later */
 	verts.resize(numverts);
@@ -122,6 +119,8 @@ void Mesh::reserve(int numverts, int numtris, int numcurves, int numcurvekeys)
 
 	curve_keys.resize(numcurvekeys);
 	curves.resize(numcurves);
+
+	patches.resize(numpatches);
 
 	attributes.reserve();
 	curve_attributes.reserve();
@@ -139,6 +138,8 @@ void Mesh::clear()
 
 	curve_keys.clear();
 	curves.clear();
+
+	patches.clear();
 
 	attributes.clear();
 	curve_attributes.clear();
@@ -208,6 +209,19 @@ void Mesh::add_curve(int first_key, int num_keys, int shader)
 	curve.shader = shader;
 
 	curves.push_back(curve);
+}
+
+void Mesh::set_patch(int i, int v0, int v1, int v2, int v3, int shader, bool smooth)
+{
+	Patch patch;
+	patch.v[0] = v0;
+	patch.v[1] = v1;
+	patch.v[2] = v2;
+	patch.v[3] = v3;
+	patch.shader = shader;
+	patch.smooth = smooth;
+
+	patches[i] = patch;
 }
 
 void Mesh::compute_bounds()
@@ -1447,76 +1461,6 @@ bool Mesh::need_attribute(Scene *scene, ustring name)
 			return true;
 	
 	return false;
-}
-
-void Mesh::tessellate(DiagSplit *split)
-{
-	int num_faces = triangles.size();
-
-	add_face_normals();
-
-	Attribute *attr_vF = attributes.find(ATTR_STD_FACE_NORMAL);
-	float3 *vF = attr_vF->data_float3();
-
-	Attribute *attr_vN = attributes.find(ATTR_STD_VERTEX_NORMAL);
-	float3 *vN = attr_vN->data_float3();
-
-	for(int f = 0; f < num_faces; f++) {
-		if(!forms_quad[f]) {
-			/* triangle */
-			LinearTrianglePatch* patch = new LinearTrianglePatch();
-			float3 *hull = patch->hull;
-			float3 *normals = patch->normals;
-
-			for(int i = 0; i < 3; i++) {
-				hull[i] = verts[triangles[f].v[i]];
-			}
-
-			if(smooth[f]) {
-				for(int i = 0; i < 3; i++) {
-					normals[i] = vN[triangles[f].v[i]];
-				}
-			}
-			else {
-				for(int i = 0; i < 3; i++) {
-					normals[i] = vF[f];
-				}
-			}
-
-			split->split_triangle(patch);
-			delete patch;
-		}
-		else {
-			/* quad */
-			LinearQuadPatch* patch = new LinearQuadPatch();
-			float3 *hull = patch->hull;
-			float3 *normals = patch->normals;
-
-			hull[0] = verts[triangles[f  ].v[0]];
-			hull[1] = verts[triangles[f  ].v[1]];
-			hull[3] = verts[triangles[f  ].v[2]];
-			hull[2] = verts[triangles[f+1].v[2]];
-
-			if(smooth[f]) {
-				normals[0] = vN[triangles[f  ].v[0]];
-				normals[1] = vN[triangles[f  ].v[1]];
-				normals[3] = vN[triangles[f  ].v[2]];
-				normals[2] = vN[triangles[f+1].v[2]];
-			}
-			else {
-				for(int i = 0; i < 4; i++) {
-					normals[i] = vF[f];
-				}
-			}
-
-			split->split_quad(patch);
-			delete patch;
-
-			// consume second triangle in quad
-			f++;
-		}
-
-	}
 }
 
 CCL_NAMESPACE_END
