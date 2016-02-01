@@ -40,6 +40,7 @@ class Progress;
 class Scene;
 class SceneParams;
 class AttributeRequest;
+class MeshOsdData;
 
 /* Mesh */
 
@@ -103,6 +104,14 @@ public:
 		DISPLACE_NUM_METHODS,
 	};
 
+	enum SubdivisionType {
+		SUBDIVISION_NONE,
+		SUBDIVISION_LINEAR,
+		SUBDIVISION_CATMALL_CLARK,
+	};
+
+	SubdivisionType subdivision_type;
+
 	ustring name;
 
 	/* Mesh Data */
@@ -128,6 +137,7 @@ public:
 
 	vector<Patch> patches;
 	vector<SubPatch> subpatches;
+	MeshOsdData* osd_data;
 
 	vector<uint> used_shaders;
 	AttributeSet attributes;
@@ -197,6 +207,9 @@ public:
 
 	/* Check if the mesh should be treated as instanced. */
 	bool is_instanced() const;
+
+	void update_osd();
+	void free_osd_data();
 
 	void dice_subpatch(int p, SubdParams& params);
 	void tessellate(DiagSplit *split);

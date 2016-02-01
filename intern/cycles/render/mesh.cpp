@@ -85,6 +85,7 @@ Mesh::Mesh()
 	motion_steps = 3;
 	use_motion_blur = false;
 
+	subdivision_type = SUBDIVISION_NONE;
 	displacement_scale = 1.0f;
 
 	bvh = NULL;
@@ -100,11 +101,14 @@ Mesh::Mesh()
 
 	has_volume = false;
 	has_surface_bssrdf = false;
+
+	osd_data = NULL;
 }
 
 Mesh::~Mesh()
 {
 	delete bvh;
+	free_osd_data();
 }
 
 void Mesh::reserve(int numverts, int numtris, int numcurves, int numcurvekeys, int numpatches)
@@ -140,6 +144,7 @@ void Mesh::clear()
 	curves.clear();
 
 	patches.clear();
+	free_osd_data();
 
 	attributes.clear();
 	curve_attributes.clear();

@@ -677,6 +677,7 @@ static void create_subd_mesh(Scene *scene,
                              bool preview)
 {
 	Mesh *basemesh = new Mesh();
+	basemesh->subdivision_type = (Mesh::SubdivisionType)RNA_enum_get(cmesh, "subdivision_type");
 	create_mesh(scene, basemesh, b_mesh, used_shaders, true);
 
 	SubdParams sdparams(mesh, used_shaders[0], true, false);
