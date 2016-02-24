@@ -35,6 +35,8 @@
 #include "util_progress.h"
 #include "util_set.h"
 
+#include "geom/geom_cache.h"
+
 CCL_NAMESPACE_BEGIN
 
 /* Triangle */
@@ -70,6 +72,15 @@ void Mesh::Curve::bounds_grow(const int k, const float4 *curve_keys, BoundBox& b
 	bounds.grow(upper, mr);
 }
 
+/* SubPatch */
+
+void Mesh::SubPatch::bounds_grow(BoundBox& bounds_) const
+{
+	// use cached bounds if available
+	if(bounds.valid())
+		bounds_.grow(bounds);
+}
+
 /* Mesh */
 
 Mesh::Mesh()
@@ -96,6 +107,8 @@ Mesh::Mesh()
 	curve_offset = 0;
 	curvekey_offset = 0;
 
+	patch_offset = 0;
+
 	attributes.triangle_mesh = this;
 	curve_attributes.curve_mesh = this;
 
@@ -119,8 +132,6 @@ void Mesh::reserve(int numverts, int numtris, int numcurves, int numcurvekeys, i
 	shader.resize(numtris);
 	smooth.resize(numtris);
 
-	forms_quad.resize(numtris);
-
 	curve_keys.resize(numcurvekeys);
 	curves.resize(numcurves);
 
@@ -138,12 +149,11 @@ void Mesh::clear()
 	shader.clear();
 	smooth.clear();
 
-	forms_quad.clear();
-
 	curve_keys.clear();
 	curves.clear();
 
 	patches.clear();
+	subpatches.clear();
 	free_osd_data();
 
 	attributes.clear();
@@ -172,7 +182,7 @@ int Mesh::split_vertex(int vertex)
 	return verts.size() - 1;
 }
 
-void Mesh::set_triangle(int i, int v0, int v1, int v2, int shader_, bool smooth_, bool forms_quad_)
+void Mesh::set_triangle(int i, int v0, int v1, int v2, int shader_, bool smooth_)
 {
 	Triangle tri;
 	tri.v[0] = v0;
@@ -182,10 +192,9 @@ void Mesh::set_triangle(int i, int v0, int v1, int v2, int shader_, bool smooth_
 	triangles[i] = tri;
 	shader[i] = shader_;
 	smooth[i] = smooth_;
-	forms_quad[i] = forms_quad_;
 }
 
-void Mesh::add_triangle(int v0, int v1, int v2, int shader_, bool smooth_, bool forms_quad_)
+void Mesh::add_triangle(int v0, int v1, int v2, int shader_, bool smooth_)
 {
 	Triangle tri;
 	tri.v[0] = v0;
@@ -195,7 +204,6 @@ void Mesh::add_triangle(int v0, int v1, int v2, int shader_, bool smooth_, bool 
 	triangles.push_back(tri);
 	shader.push_back(shader_);
 	smooth.push_back(smooth_);
-	forms_quad.push_back(forms_quad_);
 }
 
 void Mesh::add_curve_key(float3 co, float radius)
@@ -260,6 +268,10 @@ void Mesh::compute_bounds()
 				bnds.grow(key_steps[i]);
 		}
 
+		for(size_t i = 0; i < subpatches.size(); i++) {
+			subpatches[i].bounds_grow(bnds);
+		}
+
 		if(!bnds.valid()) {
 			bnds = BoundBox::empty;
 
@@ -284,6 +296,10 @@ void Mesh::compute_bounds()
 		
 				for(size_t i = 0; i < steps_size; i++)
 					bnds.grow_safe(key_steps[i]);
+			}
+
+			for(size_t i = 0; i < subpatches.size(); i++) {
+				subpatches[i].bounds_grow(bnds);
 			}
 		}
 	}
@@ -564,6 +580,7 @@ void Mesh::tag_update(Scene *scene, bool rebuild)
 	if(rebuild) {
 		need_update_rebuild = true;
 		scene->light_manager->need_update = true;
+		scene->mesh_manager->need_clear_geom_cache = true;
 	}
 	else {
 		foreach(uint sindex, used_shaders)
@@ -604,6 +621,7 @@ MeshManager::MeshManager()
 	bvh = NULL;
 	need_update = true;
 	need_flags_update = true;
+	need_clear_geom_cache = true;
 }
 
 MeshManager::~MeshManager()
@@ -1062,6 +1080,8 @@ void MeshManager::device_update_mesh(Device *device, DeviceScene *dscene, Scene 
 	size_t curve_key_size = 0;
 	size_t curve_size = 0;
 
+	size_t patch_size = 0;
+
 	foreach(Mesh *mesh, scene->meshes) {
 		mesh->vert_offset = vert_size;
 		mesh->tri_offset = tri_size;
@@ -1069,11 +1089,15 @@ void MeshManager::device_update_mesh(Device *device, DeviceScene *dscene, Scene 
 		mesh->curvekey_offset = curve_key_size;
 		mesh->curve_offset = curve_size;
 
+		mesh->patch_offset = patch_size;
+
 		vert_size += mesh->verts.size();
 		tri_size += mesh->triangles.size();
 
 		curve_key_size += mesh->curve_keys.size();
 		curve_size += mesh->curves.size();
+
+		patch_size += mesh->patches.size();
 	}
 
 	if(tri_size != 0) {
@@ -1258,6 +1282,15 @@ void MeshManager::device_update(Device *device, DeviceScene *dscene, Scene *scen
 	if(!need_update)
 		return;
 
+	GeomCache* geom_cache = device->get_geom_cache();
+	geom_cache_set_scene(geom_cache, scene);
+	geom_cache_set_max_size(geom_cache, scene->params.geom_cache_max_size);
+
+	if(need_clear_geom_cache) {
+		geom_cache_clear(device->get_geom_cache());
+		need_clear_geom_cache = false;
+	}
+
 	/* update normals */
 	foreach(Mesh *mesh, scene->meshes) {
 		foreach(uint shader, mesh->used_shaders) {
@@ -1323,6 +1356,46 @@ void MeshManager::device_update(Device *device, DeviceScene *dscene, Scene *scen
 
 		device_update_attributes(device, dscene, scene, progress);
 		if(progress.get_cancel()) return;
+	}
+
+	/* calculate bounds subpatches, done here since some patches may need to be displaced */
+	foreach(Mesh *mesh, scene->meshes) {
+		if(mesh->need_update) {
+			string msg = string_printf("Computing Subdivision Bounds %s", mesh->name.c_str());
+			progress.set_status("Updating Mesh", msg);
+
+			for(int i = 0; i < mesh->subpatches.size(); i++) {
+				Mesh::SubPatch* subpatch = &mesh->subpatches[i];
+
+				// calculate subpatch size
+				uint num_verts, num_tris;
+				mesh->diced_subpatch_size(i, &num_verts, &num_tris, NULL);
+				size_t size = sizeof(TessellatedSubPatch) + sizeof(float4)*(num_verts*2 + num_tris);
+
+				// dice subpatch
+				TessellatedSubPatch* diced = (TessellatedSubPatch*)malloc(size);
+				memset(diced, 0, sizeof(TessellatedSubPatch));
+
+				diced->vert_offset = 0;
+				diced->tri_offset = num_verts*2;
+
+				mesh->dice_subpatch(diced, i);
+
+				// displace
+				// TODO(mai): implement
+
+				// grow bounds
+				subpatch->bounds = BoundBox::empty;
+				float4* verts = &diced->data[diced->vert_offset];
+
+				for(int i = 0; i < num_verts*2; i += 2) {
+					subpatch->bounds.grow(float4_to_float3(verts[i]));
+				}
+
+				// free subpatch
+				free(diced);
+			}
+		}
 	}
 
 	/* update bvh */

@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #include <opensubdiv/far/topologyDescriptor.h>
 #include <opensubdiv/far/primvarRefiner.h>
 #include <opensubdiv/far/patchTableFactory.h>
@@ -261,12 +260,63 @@ static float3 patch_normal(Mesh* mesh, int patch) {
 	return norm / normlen;
 }
 
-void Mesh::dice_subpatch(int subpatch_id, SubdParams& params)
+void Mesh::diced_subpatch_size(int subpatch_id, uint* num_verts, uint* num_tris)
+{
+	SubPatch& subpatch = subpatches[subpatch_id];
+
+	SubdParams params;
+
+	if(subpatch.is_quad()) {
+		QuadDice dice(params);
+
+		QuadDice::SubPatch sub;
+		QuadDice::EdgeFactors ef;
+
+		sub.P00 = subpatch.uv[0];
+		sub.P10 = subpatch.uv[1];
+		sub.P01 = subpatch.uv[2];
+		sub.P11 = subpatch.uv[3];
+
+		ef.tu0 = subpatch.edge_factors[0];
+		ef.tu1 = subpatch.edge_factors[1];
+		ef.tv0 = subpatch.edge_factors[2];
+		ef.tv1 = subpatch.edge_factors[3];
+
+		dice.diced_size(sub, ef, num_verts, num_tris);
+	}
+	else {
+		TriangleDice dice(params);
+
+		TriangleDice::SubPatch sub;
+		TriangleDice::EdgeFactors ef;
+
+		sub.Pu = subpatch.uv[0];
+		sub.Pv = subpatch.uv[1];
+		sub.Pw = subpatch.uv[2];
+
+		ef.tu = subpatch.edge_factors[0];
+		ef.tv = subpatch.edge_factors[1];
+		ef.tw = subpatch.edge_factors[2];
+
+		dice.diced_size(sub, ef, num_verts, num_tris);
+	}
+}
+
+void Mesh::dice_subpatch(TessellatedSubPatch* diced, int subpatch_id)
 {
 	SubPatch& subpatch = subpatches[subpatch_id];
 	Patch& patch = patches[subpatch.patch];
 
-	params.shader = patches[subpatches[p].patch].shader;
+	diced->patch = subpatch.patch | (patch.is_quad() ? 0 : 0x80000000);
+	for(int i = 0; i < 4; i++) {
+		diced->v[i] = patch.v[i] + vert_offset;
+		diced->uv[i] = subpatch.uv[i];
+	}
+	if(!subpatch.is_quad()) {
+		diced->uv[3].x = -1;
+	}
+	diced->shader = reinterpret_cast<ShaderManager*>(NULL)->get_shader_id(patch.shader, this, true);
+	diced->smooth = patch.smooth;
 
 	OsdPatch osd_patch;
 	LinearQuadPatch quad_patch;
@@ -320,6 +370,9 @@ void Mesh::dice_subpatch(int subpatch_id, SubdParams& params)
 		}
 	}
 
+	SubdParams params;
+	params.subpatch = diced;
+
 	if(subpatch.is_quad()) {
 		QuadDice dice(params);
 
@@ -358,7 +411,7 @@ void Mesh::dice_subpatch(int subpatch_id, SubdParams& params)
 	}
 }
 
-void Mesh::tessellate(DiagSplit *split)
+void Mesh::split_patches(DiagSplit *split)
 {
 	update_osd();
 
@@ -462,10 +515,6 @@ void Mesh::tessellate(DiagSplit *split)
 
 		split->subpatches_triangle.clear();
 		split->edgefactors_triangle.clear();
-	}
-
-	for(int p = 0; p < subpatches.size(); p++) {
-		dice_subpatch(p, split->params);
 	}
 }
 
