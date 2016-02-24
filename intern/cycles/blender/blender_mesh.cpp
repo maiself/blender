@@ -623,19 +623,18 @@ static void create_mesh(Scene *scene,
 				if(is_zero(cross(mesh->verts[vi[1]] - mesh->verts[vi[0]], mesh->verts[vi[2]] - mesh->verts[vi[0]])) ||
 				   is_zero(cross(mesh->verts[vi[2]] - mesh->verts[vi[0]], mesh->verts[vi[3]] - mesh->verts[vi[0]])))
 				{
-					// TODO(mai): order here is probably wrong
-					mesh->set_triangle(ti++, vi[0], vi[1], vi[3], shader, smooth, true);
-					mesh->set_triangle(ti++, vi[2], vi[3], vi[1], shader, smooth, true);
+					mesh->set_triangle(ti++, vi[0], vi[1], vi[3], shader, smooth);
+					mesh->set_triangle(ti++, vi[2], vi[3], vi[1], shader, smooth);
 					face_flags[fi] |= FACE_FLAG_DIVIDE_24;
 				}
 				else {
-					mesh->set_triangle(ti++, vi[0], vi[1], vi[2], shader, smooth, true);
-					mesh->set_triangle(ti++, vi[0], vi[2], vi[3], shader, smooth, true);
+					mesh->set_triangle(ti++, vi[0], vi[1], vi[2], shader, smooth);
+					mesh->set_triangle(ti++, vi[0], vi[2], vi[3], shader, smooth);
 					face_flags[fi] |= FACE_FLAG_DIVIDE_13;
 				}
 			}
 			else
-				mesh->set_triangle(ti++, vi[0], vi[1], vi[2], shader, smooth, false);
+				mesh->set_triangle(ti++, vi[0], vi[1], vi[2], shader, smooth);
 		}
 		else {
 			/* create patches */
@@ -676,11 +675,10 @@ static void create_subd_mesh(Scene *scene,
                              const vector<uint>& used_shaders,
                              bool preview)
 {
-	Mesh *basemesh = new Mesh();
-	basemesh->subdivision_type = (Mesh::SubdivisionType)RNA_enum_get(cmesh, "subdivision_type");
-	create_mesh(scene, basemesh, b_mesh, used_shaders, true);
+	mesh->subdivision_type = (Mesh::SubdivisionType)RNA_enum_get(cmesh, "subdivision_type");
+	create_mesh(scene, mesh, b_mesh, used_shaders, true);
 
-	SubdParams sdparams(mesh, used_shaders[0], true, false);
+	SubdParams sdparams;
 	sdparams.dicing_rate = preview ? RNA_float_get(cmesh, "preview_dicing_rate") : RNA_float_get(cmesh, "dicing_rate");
 	sdparams.max_level = RNA_int_get(cmesh, "max_subdivision_level");
 
@@ -690,9 +688,7 @@ static void create_subd_mesh(Scene *scene,
 
 	/* tesselate */
 	DiagSplit dsplit(sdparams);
-	basemesh->tessellate(&dsplit);
-
-	delete basemesh;
+	mesh->split_patches(&dsplit);
 }
 
 /* Sync */

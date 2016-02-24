@@ -29,7 +29,6 @@
 
 CCL_NAMESPACE_BEGIN
 
-class Mesh;
 class Patch;
 
 #define DSPLIT_NON_UNIFORM -1

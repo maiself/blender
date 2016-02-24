@@ -70,15 +70,20 @@ public:
 		uint shader;
 		bool smooth;
 
-		bool is_quad() { return v[3] != -1; }
+		bool is_quad() const { return v[3] != -1; }
 	};
 
 	struct SubPatch {
 		int patch;
 		int edge_factors[4];
 		float2 uv[4];
+		BoundBox bounds;
+
+		SubPatch() : bounds(BoundBox::empty) {}
 
 		bool is_quad() const { return edge_factors[3] != -1; }
+
+		void bounds_grow(BoundBox& bounds) const;
 
 		bool operator == (const SubPatch& other) const
 		{
@@ -127,7 +132,6 @@ public:
 	vector<Triangle> triangles;
 	vector<uint> shader;
 	vector<bool> smooth;
-	vector<bool> forms_quad; /* used to tell if triangle is part of a quad patch */
 
 	bool has_volume;  /* Set in the device_update_flags(). */
 	bool has_surface_bssrdf;  /* Set in the device_update_flags(). */
@@ -166,14 +170,16 @@ public:
 	size_t curve_offset;
 	size_t curvekey_offset;
 
+	size_t patch_offset;
+
 	/* Functions */
 	Mesh();
 	~Mesh();
 
 	void reserve(int numverts, int numfaces, int numcurves, int numcurvekeys, int numpatches);
 	void clear();
-	void set_triangle(int i, int v0, int v1, int v2, int shader, bool smooth, bool forms_quad=false);
-	void add_triangle(int v0, int v1, int v2, int shader, bool smooth, bool forms_quad=false);
+	void set_triangle(int i, int v0, int v1, int v2, int shader, bool smooth);
+	void add_triangle(int v0, int v1, int v2, int shader, bool smooth);
 	void add_curve_key(float3 loc, float radius);
 	void add_curve(int first_key, int num_keys, int shader);
 	void set_patch(int i, int v0, int v1, int v2, int v3, int shader, bool smooth);
@@ -211,8 +217,9 @@ public:
 	void update_osd();
 	void free_osd_data();
 
-	void dice_subpatch(int p, SubdParams& params);
-	void tessellate(DiagSplit *split);
+	void split_patches(DiagSplit *split);
+	void diced_subpatch_size(int subpatch_id, uint* num_verts, uint* num_tris);
+	void dice_subpatch(TessellatedSubPatch* diced, int subpatch_id);
 };
 
 /* Mesh Manager */
@@ -223,6 +230,7 @@ public:
 
 	bool need_update;
 	bool need_flags_update;
+	bool need_clear_geom_cache;
 
 	MeshManager();
 	~MeshManager();

@@ -263,6 +263,22 @@ ccl_device void BVH_FUNCTION_FULL_NAME(QBVH)(KernelGlobals *kg,
 						break;
 					}
 #endif
+					case PRIMITIVE_SUBPATCH: {
+						/* Intersect ray against primitive, */
+						for(; primAddr < primAddr2; primAddr++) {
+							kernel_assert(kernel_tex_fetch(__prim_type, primAddr) == type);
+							subpatch_intersect_subsurface(kg,
+							                              &isect_precalc,
+							                              ss_isect,
+							                              P,
+							                              object,
+							                              primAddr,
+							                              isect_t,
+							                              lcg_state,
+							                              max_hits);
+						}
+						break;
+					}
 					default:
 						break;
 				}

@@ -29,31 +29,15 @@ CCL_NAMESPACE_BEGIN
 EdgeDice::EdgeDice(const SubdParams& params_)
 : params(params_)
 {
-	mesh_P = NULL;
-	mesh_N = NULL;
 	vert_offset = 0;
-
-	params.mesh->attributes.add(ATTR_STD_VERTEX_NORMAL);
-
-	if(params.ptex) {
-		params.mesh->attributes.add(ATTR_STD_PTEX_UV);
-		params.mesh->attributes.add(ATTR_STD_PTEX_FACE_ID);
-	}
 }
 
 void EdgeDice::reserve(int num_verts, int num_tris)
 {
-	Mesh *mesh = params.mesh;
+	params.subpatch->num_triangles = 0;
 
-	vert_offset = mesh->verts.size();
-	tri_offset = mesh->triangles.size();
-
-	mesh->reserve(vert_offset + num_verts, tri_offset + num_tris, 0, 0, 0);
-
-	Attribute *attr_vN = mesh->attributes.add(ATTR_STD_VERTEX_NORMAL);
-
-	mesh_P = &mesh->verts[0];
-	mesh_N = attr_vN->data_float3();
+	vert_offset = params.subpatch->vert_offset;
+	tri_offset = params.subpatch->tri_offset;
 }
 
 int EdgeDice::add_vert(Patch *patch, float2 uv)
@@ -62,41 +46,26 @@ int EdgeDice::add_vert(Patch *patch, float2 uv)
 
 	patch->eval(&P, NULL, NULL, &N, uv.x, uv.y);
 
-	assert(vert_offset < params.mesh->verts.size());
+	assert(vert_offset < tri_offset);
 
-	mesh_P[vert_offset] = P;
-	mesh_N[vert_offset] = N;
+	params.subpatch->data[vert_offset++] = make_float4(P.x, P.y, P.z, uv.x);
+	params.subpatch->data[vert_offset++] = make_float4(N.x, N.y, N.z, uv.y);
 
-	/*if(params.ptex) {
-		Attribute *attr_ptex_uv = params.mesh->attributes.add(ATTR_STD_PTEX_UV);
-		params.mesh->attributes.reserve();
-
-		float3 *ptex_uv = attr_ptex_uv->data_float3();
-		ptex_uv[vert_offset] = make_float3(uv.x, uv.y, 0.0f);
-	}*/
-
-	return vert_offset++;
+	return (vert_offset-2) / 2; /* TODO(mai): not safe; will cause tessellation to be jumbled if wrong */
 }
 
 void EdgeDice::add_triangle(Patch *patch, int v0, int v1, int v2)
 {
-	params.mesh->add_triangle(v0, v1, v2, params.shader, params.smooth, false);
-
-	/*if(params.ptex) {
-		Attribute *attr_ptex_face_id = params.mesh->attributes.add(ATTR_STD_PTEX_FACE_ID);
-		params.mesh->attributes.reserve();
-
-		float *ptex_face_id = attr_ptex_face_id->data_float();
-		ptex_face_id[tri_offset] = (float)patch->ptex_face_id();
-	}*/
-
-	tri_offset++;
+	params.subpatch->data[tri_offset++] = make_float4(__int_as_float(v0*2), __int_as_float(v1*2), __int_as_float(v2*2), 0.0f);
+	params.subpatch->num_triangles++;
 }
 
 void EdgeDice::stitch_triangles(Patch *patch, vector<int>& outer, vector<int>& inner)
 {
 	if(inner.size() == 0 || outer.size() == 0)
 		return; // XXX avoid crashes for Mu or Mv == 1, missing polygons
+
+	float4* verts = &params.subpatch->data[params.subpatch->vert_offset];
 
 	/* stitch together two arrays of verts with triangles. at each step,
 	 * we compare using the next verts on both sides, to find the split
@@ -116,8 +85,8 @@ void EdgeDice::stitch_triangles(Patch *patch, vector<int>& outer, vector<int>& i
 		}
 		else {
 			/* length of diagonals */
-			float len1 = len_squared(mesh_P[inner[i]] - mesh_P[outer[j+1]]);
-			float len2 = len_squared(mesh_P[outer[j]] - mesh_P[inner[i+1]]);
+			float len1 = len_squared(float4_to_float3(verts[inner[i]*2]) - float4_to_float3(verts[outer[j+1]*2]));
+			float len2 = len_squared(float4_to_float3(verts[outer[j]*2]) - float4_to_float3(verts[inner[i+1]*2]));
 
 			/* use smallest diagonal */
 			if(len1 < len2)
@@ -137,11 +106,18 @@ QuadDice::QuadDice(const SubdParams& params_)
 {
 }
 
-void QuadDice::reserve(EdgeFactors& ef, int Mu, int Mv)
+void QuadDice::calc_size(EdgeFactors& ef, int Mu, int Mv, uint* num_verts, uint* num_tris)
 {
 	/* XXX need to make this also work for edge factor 0 and 1 */
-	int num_verts = (ef.tu0 + ef.tu1 + ef.tv0 + ef.tv1) + (Mu - 1)*(Mv - 1);
-	int num_tris = 0;
+	*num_verts = (ef.tu0 + ef.tu1 + ef.tv0 + ef.tv1) + (Mu - 1)*(Mv - 1);
+	*num_tris = 2*(Mu - 2)*(Mv - 2) + (ef.tu0 + ef.tu1 + ef.tv0 + ef.tv1 + Mu*2 + Mv*2 - 8);
+}
+
+void QuadDice::reserve(EdgeFactors& ef, int Mu, int Mv)
+{
+	uint num_verts, num_tris;
+	calc_size(ef, Mu, Mv, &num_verts, &num_tris);
+
 	EdgeDice::reserve(num_verts, num_tris);
 }
 
@@ -291,6 +267,24 @@ void QuadDice::add_grid(SubPatch& sub, int Mu, int Mv, int offset)
 	}
 }
 
+void QuadDice::diced_size(SubPatch& sub, EdgeFactors& ef, uint* num_verts, uint* num_tris)
+{
+	/* compute inner grid size with scale factor */
+	int Mu = max(ef.tu0, ef.tu1);
+	int Mv = max(ef.tv0, ef.tv1);
+
+#if 0 /* doesnt work very well, especially at grazing angles */
+	float S = scale_factor(sub, ef, Mu, Mv);
+#else
+	float S = 1.0f;
+#endif
+
+	Mu = max((int)ceil(S*Mu), 2); // XXX handle 0 & 1?
+	Mv = max((int)ceil(S*Mv), 2); // XXX handle 0 & 1?
+
+	calc_size(ef, Mu, Mv, num_verts, num_tris);
+}
+
 void QuadDice::dice(SubPatch& sub, EdgeFactors& ef)
 {
 	/* compute inner grid size with scale factor */
@@ -307,7 +301,7 @@ void QuadDice::dice(SubPatch& sub, EdgeFactors& ef)
 	Mv = max((int)ceil(S*Mv), 2); // XXX handle 0 & 1?
 
 	/* reserve space for new verts */
-	int offset = params.mesh->verts.size();
+	int offset = 0;
 	reserve(ef, Mu, Mv);
 
 	/* corners and inner grid */
@@ -331,8 +325,6 @@ void QuadDice::dice(SubPatch& sub, EdgeFactors& ef)
 	/* right side */
 	add_side_v(sub, outer, inner, Mu, Mv, ef.tv1, 1, offset);
 	stitch_triangles(sub.patch, outer, inner);
-
-	assert(vert_offset == params.mesh->verts.size());
 }
 
 /* TriangleDice */
@@ -342,17 +334,26 @@ TriangleDice::TriangleDice(const SubdParams& params_)
 {
 }
 
-void TriangleDice::reserve(EdgeFactors& ef, int M)
+void TriangleDice::calc_size(EdgeFactors& ef, int M, uint* num_verts, uint* num_tris)
 {
-	int num_verts = ef.tu + ef.tv + ef.tw;
+	*num_verts = ef.tu + ef.tv + ef.tw;
 
 	for(int m = M-2; m > 0; m -= 2)
-		num_verts += 3 + (m-1)*3;
+		*num_verts += 3 + (m-1)*3;
 	
 	if(!(M & 1))
-		num_verts++;
-	
-	EdgeDice::reserve(num_verts, 0);
+		(*num_verts)++;
+
+	// TODO(mai): find a better value
+	*num_tris = (*num_verts)*2;
+}
+
+void TriangleDice::reserve(EdgeFactors& ef, int M)
+{
+	uint num_verts, num_tris;
+	calc_size(ef, M, &num_verts, &num_tris);
+
+	EdgeDice::reserve(num_verts, num_tris);
 }
 
 float2 TriangleDice::map_uv(SubPatch& sub, float2 uv)
@@ -469,6 +470,17 @@ void TriangleDice::add_grid(SubPatch& sub, EdgeFactors& ef, int M)
 	}
 }
 
+void TriangleDice::diced_size(SubPatch& sub, EdgeFactors& ef, uint* num_verts, uint* num_tris)
+{
+	/* todo: handle 2 1 1 resolution */
+	int M = max(ef.tu, max(ef.tv, ef.tw));
+
+	float S = 0.7598356856515927f; /* (2*cos(30d)/3)**0.5 ; makes internal triangles more consistant with quad patches*/
+	M = max((int)ceil(S*M), 1);
+
+	calc_size(ef, M, num_verts, num_tris);
+}
+
 void TriangleDice::dice(SubPatch& sub, EdgeFactors& ef)
 {
 	/* todo: handle 2 1 1 resolution */
@@ -479,8 +491,6 @@ void TriangleDice::dice(SubPatch& sub, EdgeFactors& ef)
 
 	reserve(ef, M);
 	add_grid(sub, ef, M);
-
-	assert(vert_offset == params.mesh->verts.size());
 }
 
 CCL_NAMESPACE_END

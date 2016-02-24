@@ -498,6 +498,12 @@ class CyclesRenderSettings(bpy.types.PropertyGroup):
                             "but time can be saved by manually stopping the render when the noise is low enough)",
                 default=False,
                 )
+        cls.geom_cache_max_size = IntProperty(
+                name="Geometry Cache Size",
+                description="Maximum size of the geometry cache in MB",
+                min=128, max=1024*4,
+                default=256,
+                )
 
         cls.bake_type = EnumProperty(
             name="Bake Type",

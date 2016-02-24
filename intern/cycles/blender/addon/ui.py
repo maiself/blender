@@ -385,6 +385,11 @@ class CyclesRender_PT_performance(CyclesButtonsPanel, Panel):
         col.label(text="Acceleration structure:")
         col.prop(cscene, "debug_use_spatial_splits")
 
+        col.separator()
+
+        col.label(text="Geometry Cache:")
+        col.prop(cscene, "geom_cache_max_size", text="Max Size")
+
 
 class CyclesRender_PT_layer_options(CyclesButtonsPanel, Panel):
     bl_label = "Layer"
