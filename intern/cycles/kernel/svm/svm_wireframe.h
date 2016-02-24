@@ -41,7 +41,7 @@ ccl_device float wireframe(KernelGlobals *kg,
                            float3 *P)
 {
 #ifdef __HAIR__
-	if(ccl_fetch(sd, prim) != PRIM_NONE && ccl_fetch(sd, type) & PRIMITIVE_ALL_TRIANGLE)
+	if(ccl_fetch(sd, prim) != PRIM_NONE && ccl_fetch(sd, type) & (PRIMITIVE_ALL_TRIANGLE | PRIMITIVE_CACHE_TRIANGLE))
 #else
 	if(ccl_fetch(sd, prim) != PRIM_NONE)
 #endif
@@ -54,8 +54,12 @@ ccl_device float wireframe(KernelGlobals *kg,
 
 		if(ccl_fetch(sd, type) & PRIMITIVE_TRIANGLE)
 			triangle_vertices(kg, ccl_fetch(sd, prim), Co);
-		else
+		else if(ccl_fetch(sd, type) & PRIMITIVE_MOTION_TRIANGLE)
 			motion_triangle_vertices(kg, ccl_fetch(sd, object), ccl_fetch(sd, prim), ccl_fetch(sd, time), Co);
+		else {
+			for(int i = 0; i < 3; i++)
+				Co[i] = sd->cache_triangle.verts[i];
+		}
 
 		if(!(ccl_fetch(sd, flag) & SD_TRANSFORM_APPLIED)) {
 			object_position_transform(kg, sd, &Co[0]);

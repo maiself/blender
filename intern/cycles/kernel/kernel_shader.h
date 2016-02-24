@@ -103,9 +103,13 @@ ccl_device_noinline void shader_setup_from_ray(KernelGlobals *kg,
 		triangle_dPdudv(kg, ccl_fetch(sd, prim), &ccl_fetch(sd, dPdu), &ccl_fetch(sd, dPdv));
 #endif
 	}
-	else {
+	else if(ccl_fetch(sd, type) & PRIMITIVE_MOTION_TRIANGLE) {
 		/* motion triangle */
 		motion_triangle_shader_setup(kg, sd, isect, ray, false);
+	}
+	else if(ccl_fetch(sd, type) & PRIMITIVE_CACHE_TRIANGLE) {
+		/* triangle from geometry cache*/
+		cache_triangle_shader_setup(kg, sd, isect, ray, false);
 	}
 
 	ccl_fetch(sd, I) = -ray->D;
@@ -180,6 +184,9 @@ ccl_device_inline void shader_setup_from_subsurface(KernelGlobals *kg, ShaderDat
 		/* dPdu/dPdv */
 		triangle_dPdudv(kg, sd->prim, &sd->dPdu, &sd->dPdv);
 #  endif
+	}
+	else if(sd->type == PRIMITIVE_CACHE_TRIANGLE) {
+		cache_triangle_shader_setup(kg, sd, isect, ray, true);
 	}
 	else {
 		/* motion triangle */
@@ -1067,12 +1074,11 @@ ccl_device bool shader_transparent_shadow(KernelGlobals *kg, Intersection *isect
 	int prim = kernel_tex_fetch(__prim_index, isect->prim);
 	int shader = 0;
 
-#ifdef __HAIR__
-	if(kernel_tex_fetch(__prim_type, isect->prim) & PRIMITIVE_ALL_TRIANGLE) {
-#endif
+	if(kernel_tex_fetch(__prim_type, isect->prim) & PRIMITIVE_ALL_TRIANGLE)
 		shader = kernel_tex_fetch(__tri_shader, prim);
+	else if(isect->type & PRIMITIVE_CACHE_TRIANGLE)
+		shader = isect->cache_triangle.shader;
 #ifdef __HAIR__
-	}
 	else {
 		float4 str = kernel_tex_fetch(__curves, prim);
 		shader = __float_as_int(str.z);

@@ -675,7 +675,7 @@ bool OSLRenderServices::get_object_standard_attribute(KernelGlobals *kg, ShaderD
 	}
 	else if((name == u_geom_trianglevertices || name == u_geom_polyvertices)
 #ifdef __HAIR__
-		     && sd->type & PRIMITIVE_ALL_TRIANGLE)
+		     && sd->type & (PRIMITIVE_ALL_TRIANGLE | PRIMITIVE_CACHE_TRIANGLE))
 #else
 		)
 #endif
@@ -684,8 +684,12 @@ bool OSLRenderServices::get_object_standard_attribute(KernelGlobals *kg, ShaderD
 
 		if(sd->type & PRIMITIVE_TRIANGLE)
 			triangle_vertices(kg, sd->prim, P);
-		else
+		else if(sd->type & PRIMITIVE_MOTION_TRIANGLE)
 			motion_triangle_vertices(kg, sd->object, sd->prim, sd->time, P);
+		else {
+			for(int i = 0; i < 3; i++)
+				P[i] = sd->cache_triangle.verts[i];
+		}
 
 		if(!(sd->flag & SD_TRANSFORM_APPLIED)) {
 			object_position_transform(kg, sd, &P[0]);
