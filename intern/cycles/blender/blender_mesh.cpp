@@ -678,7 +678,7 @@ static void create_subd_mesh(Scene *scene,
 	mesh->subdivision_type = (Mesh::SubdivisionType)RNA_enum_get(cmesh, "subdivision_type");
 	create_mesh(scene, mesh, b_mesh, used_shaders, true);
 
-	SubdParams sdparams(mesh, used_shaders[0], true, false);
+	SubdParams sdparams;
 	sdparams.dicing_rate = preview ? RNA_float_get(cmesh, "preview_dicing_rate") : RNA_float_get(cmesh, "dicing_rate");
 	sdparams.max_level = RNA_int_get(cmesh, "max_subdivision_level");
 
