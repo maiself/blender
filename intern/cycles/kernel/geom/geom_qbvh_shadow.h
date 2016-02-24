@@ -260,6 +260,14 @@ ccl_device bool BVH_FUNCTION_FULL_NAME(QBVH)(KernelGlobals *kg,
 								break;
 							}
 #endif
+							case PRIMITIVE_SUBPATCH: {
+								hit = subpatch_intersect_shadow(kg, &isect_precalc, &isect_array, max_hits, num_hits, isect_t, P, object, primAddr);
+								/* shadow ray early termination */
+								if(hit) {
+									return true;
+								}
+								break;
+							}
 							default: {
 								hit = false;
 								break;

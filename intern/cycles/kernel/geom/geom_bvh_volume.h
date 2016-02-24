@@ -252,6 +252,20 @@ ccl_device bool BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
 							break;
 						}
 #endif
+						case PRIMITIVE_SUBPATCH: {
+							/* intersect ray against primitive */
+							for(; primAddr < primAddr2; primAddr++) {
+								kernel_assert(kernel_tex_fetch(__prim_type, primAddr) == type);
+								/* only primitives from volume object */
+								uint tri_object = (object == OBJECT_NONE)? kernel_tex_fetch(__prim_object, primAddr): object;
+								int object_flag = kernel_tex_fetch(__object_flag, tri_object);
+								if((object_flag & SD_OBJECT_HAS_VOLUME) == 0) {
+									continue;
+								}
+								subpatch_intersect(kg, &isect_precalc, isect, P, visibility, object, primAddr);
+							}
+							break;
+						}
 						default: {
 							break;
 						}

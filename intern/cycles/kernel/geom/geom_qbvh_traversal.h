@@ -348,6 +348,21 @@ ccl_device bool BVH_FUNCTION_FULL_NAME(QBVH)(KernelGlobals *kg,
 							break;
 						}
 #endif  /* BVH_FEATURE(BVH_HAIR) */
+						case PRIMITIVE_SUBPATCH: {
+							for(; primAddr < primAddr2; primAddr++) {
+#if defined(__KERNEL_DEBUG__)
+								isect->num_traversal_steps++;
+#endif
+								kernel_assert(kernel_tex_fetch(__prim_type, primAddr) == type);
+								if(subpatch_intersect(kg, &isect_precalc, isect, P, visibility, object, primAddr)) {
+									tfar = ssef(isect->t);
+									/* shadow ray early termination */
+									if(visibility == PATH_RAY_SHADOW_OPAQUE)
+										return true;
+								}
+							}
+							break;
+						}
 					}
 				}
 #if BVH_FEATURE(BVH_INSTANCING)
