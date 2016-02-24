@@ -534,6 +534,42 @@ typedef struct Ray {
 #endif
 } Ray;
 
+/* Tessellated geometry from geometry cache */
+
+typedef struct TessellatedSubPatch {
+	int object, prim;
+
+	// index of unsplit patch
+	uint patch;
+
+	// vertex indices of unsplit patch
+	int v[4];
+	// uv of corners of subpatch within patch
+	float2 uv[4];
+
+	// shader and smooth for patch
+	uint shader;
+	bool smooth;
+
+	int num_triangles;
+
+	// offsets into data
+	int vert_offset;
+	int tri_offset;
+	int bvh_offset;
+
+	float4 data[];
+} TessellatedSubPatch;
+
+typedef struct CacheTriangle {
+	float3 verts[3];
+	float3 normals[3];
+	float2 uv[3]; // patch parametric
+	int v[4]; // patch vert indices
+	uint patch; // index of unsplit patch
+	uint shader;
+} CacheTriangle;
+
 /* Intersection */
 
 typedef ccl_addr_space struct Intersection {
@@ -541,6 +577,8 @@ typedef ccl_addr_space struct Intersection {
 	int prim;
 	int object;
 	int type;
+
+	CacheTriangle cache_triangle;
 
 #ifdef __KERNEL_DEBUG__
 	int num_traversal_steps;
@@ -556,16 +594,18 @@ typedef enum PrimitiveType {
 	PRIMITIVE_MOTION_TRIANGLE = 2,
 	PRIMITIVE_CURVE = 4,
 	PRIMITIVE_MOTION_CURVE = 8,
+	PRIMITIVE_SUBPATCH = 16,
+	PRIMITIVE_CACHE_TRIANGLE = 32,
 
 	PRIMITIVE_ALL_TRIANGLE = (PRIMITIVE_TRIANGLE|PRIMITIVE_MOTION_TRIANGLE),
 	PRIMITIVE_ALL_CURVE = (PRIMITIVE_CURVE|PRIMITIVE_MOTION_CURVE),
 	PRIMITIVE_ALL_MOTION = (PRIMITIVE_MOTION_TRIANGLE|PRIMITIVE_MOTION_CURVE),
-	PRIMITIVE_ALL = (PRIMITIVE_ALL_TRIANGLE|PRIMITIVE_ALL_CURVE),
+	PRIMITIVE_ALL = (PRIMITIVE_ALL_TRIANGLE|PRIMITIVE_ALL_CURVE|PRIMITIVE_SUBPATCH|PRIMITIVE_CACHE_TRIANGLE),
 
 	/* Total number of different primitives.
 	 * NOTE: This is an actual value, not a bitflag.
 	 */
-	PRIMITIVE_NUM_TOTAL = 4,
+	PRIMITIVE_NUM_TOTAL = 6,
 } PrimitiveType;
 
 #define PRIMITIVE_PACK_SEGMENT(type, segment) ((segment << 16) | type)
@@ -816,6 +856,9 @@ typedef ccl_addr_space struct ShaderData {
 	struct KernelGlobals * osl_globals;
 	struct PathState *osl_path_state;
 #endif
+
+	/* triangle from geometry cache, stored here since cache entry may be invalidated before use */
+	CacheTriangle cache_triangle;
 } ShaderData;
 
 /* Path State */

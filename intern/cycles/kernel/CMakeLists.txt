@@ -5,6 +5,8 @@ set(INC
 	../util
 	osl
 	svm
+	../render
+	../device
 )
 
 set(INC_SYS
@@ -13,6 +15,7 @@ set(INC_SYS
 
 set(SRC
 	kernels/cpu/kernel.cpp
+	geom/geom_cache.cpp
 	kernels/opencl/kernel.cl
 	kernels/opencl/kernel_data_init.cl
 	kernels/opencl/kernel_queue_enqueue.cl
