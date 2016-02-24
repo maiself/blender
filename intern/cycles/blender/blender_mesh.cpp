@@ -675,9 +675,8 @@ static void create_subd_mesh(Scene *scene,
                              const vector<uint>& used_shaders,
                              bool preview)
 {
-	Mesh *basemesh = new Mesh();
-	basemesh->subdivision_type = (Mesh::SubdivisionType)RNA_enum_get(cmesh, "subdivision_type");
-	create_mesh(scene, basemesh, b_mesh, used_shaders, true);
+	mesh->subdivision_type = (Mesh::SubdivisionType)RNA_enum_get(cmesh, "subdivision_type");
+	create_mesh(scene, mesh, b_mesh, used_shaders, true);
 
 	SubdParams sdparams(mesh, used_shaders[0], true, false);
 	sdparams.dicing_rate = preview ? RNA_float_get(cmesh, "preview_dicing_rate") : RNA_float_get(cmesh, "dicing_rate");
@@ -689,9 +688,7 @@ static void create_subd_mesh(Scene *scene,
 
 	/* tesselate */
 	DiagSplit dsplit(sdparams);
-	basemesh->tessellate(&dsplit);
-
-	delete basemesh;
+	mesh->split_patches(&dsplit);
 }
 
 /* Sync */

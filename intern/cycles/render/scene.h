@@ -134,6 +134,7 @@ public:
 	bool use_bvh_spatial_split;
 	bool use_qbvh;
 	bool persistent_data;
+	size_t geom_cache_max_size;
 
 	SceneParams()
 	{
@@ -142,6 +143,7 @@ public:
 		use_bvh_spatial_split = false;
 		use_qbvh = false;
 		persistent_data = false;
+		geom_cache_max_size = 256*1024*1024;
 	}
 
 	bool modified(const SceneParams& params)
@@ -149,7 +151,8 @@ public:
 		&& bvh_type == params.bvh_type
 		&& use_bvh_spatial_split == params.use_bvh_spatial_split
 		&& use_qbvh == params.use_qbvh
-		&& persistent_data == params.persistent_data); }
+		&& persistent_data == params.persistent_data
+		&& geom_cache_max_size == params.geom_cache_max_size); }
 };
 
 /* Scene */
