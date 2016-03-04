@@ -51,6 +51,8 @@ int EdgeDice::add_vert(Patch *patch, float2 uv)
 	params.subpatch->data[vert_offset++] = make_float4(P.x, P.y, P.z, uv.x);
 	params.subpatch->data[vert_offset++] = make_float4(N.x, N.y, N.z, uv.y);
 
+	params.subpatch->num_verts++;
+
 	return (vert_offset-2) / 2; /* TODO(mai): not safe; will cause tessellation to be jumbled if wrong */
 }
 

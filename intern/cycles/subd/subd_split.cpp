@@ -96,7 +96,10 @@ int DiagSplit::T(Patch *patch, float2 Pstart, float2 Pend)
 
 	if(tmax - tmin > params.split_threshold)
 		return DSPLIT_NON_UNIFORM;
-	
+
+	if(tmax > params.max_T)
+		return DSPLIT_NON_UNIFORM;
+
 	return tmax;
 }
 

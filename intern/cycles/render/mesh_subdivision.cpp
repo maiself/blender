@@ -260,7 +260,7 @@ static float3 patch_normal(Mesh* mesh, int patch) {
 	return norm / normlen;
 }
 
-void Mesh::diced_subpatch_size(int subpatch_id, uint* num_verts, uint* num_tris)
+void Mesh::diced_subpatch_size(int subpatch_id, uint* num_verts, uint* num_tris, int* total_size)
 {
 	SubPatch& subpatch = subpatches[subpatch_id];
 
@@ -299,6 +299,14 @@ void Mesh::diced_subpatch_size(int subpatch_id, uint* num_verts, uint* num_tris)
 		ef.tw = subpatch.edge_factors[2];
 
 		dice.diced_size(sub, ef, num_verts, num_tris);
+	}
+
+	if(subpatch.cached_num_triangles >= 0) {
+		*num_tris = subpatch.cached_num_triangles;
+	}
+
+	if(total_size && subpatch.cached_tessellated_size >= 0) {
+		*total_size = subpatch.cached_tessellated_size;
 	}
 }
 
@@ -409,6 +417,9 @@ void Mesh::dice_subpatch(TessellatedSubPatch* diced, int subpatch_id)
 
 		dice.dice(sub, ef);
 	}
+
+	subpatch.cached_num_triangles = diced->num_triangles;
+	assert(!diced->bvh_offset || diced->tri_offset + diced->num_triangles <= diced->bvh_offset);
 }
 
 void Mesh::split_patches(DiagSplit *split)

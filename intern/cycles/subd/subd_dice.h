@@ -36,6 +36,7 @@ struct SubdParams {
 	int split_threshold;
 	float dicing_rate;
 	int max_level;
+	int max_T;
 	Camera *camera;
 	Transform objecttoworld;
 
@@ -47,6 +48,7 @@ struct SubdParams {
 		split_threshold = 1;
 		dicing_rate = 0.1f;
 		max_level = 12;
+		max_T = 128;
 		camera = NULL;
 		subpatch = NULL;
 	}

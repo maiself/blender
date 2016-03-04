@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "geom_subpatch_bvh.h"
+
 CCL_NAMESPACE_BEGIN
 
 ccl_device_inline bool subpatch_is_quad(TessellatedSubPatch* patch) {
@@ -245,6 +247,7 @@ ccl_device_inline bool subpatch_intersect(KernelGlobals *kg,
                                           const IsectPrecalc *isect_precalc,
                                           Intersection *isect,
                                           float3 P,
+                                          float3 dir,
                                           uint visibility,
                                           int object,
                                           int patchAddr)
@@ -258,27 +261,25 @@ ccl_device_inline bool subpatch_intersect(KernelGlobals *kg,
 	TessellatedSubPatch* subpatch = geom_cache_get_subpatch(kg, object, kernel_tex_fetch(__prim_index, patchAddr));
 
 	float4* verts = &subpatch->data[subpatch->vert_offset];
-	uint4* indices = (uint4*)&subpatch->data[subpatch->tri_offset];
 
 	float4 v[3];
 	float4 n[3];
 	bool hit = false;
 
-	/* TODO(mai): implement bvh for subpatches */
-	/* test triangles */
-	for(int i = 0; i < subpatch->num_triangles; i++) {
+	SUBPATCH_BVH_INTERSECT_LOOP_BEGIN(kg, isect_precalc, isect->t, P, dir, subpatch, tri)
+	{
 		if(subpatch_triangle_intersect(kg, isect_precalc, isect, P,
-				verts[indices[i].x], verts[indices[i].y], verts[indices[i].z]))
+				verts[tri.x], verts[tri.y], verts[tri.z]))
 		{
 			hit = true;
 
-			v[0] = verts[indices[i].x];
-			v[1] = verts[indices[i].y];
-			v[2] = verts[indices[i].z];
+			v[0] = verts[tri.x];
+			v[1] = verts[tri.y];
+			v[2] = verts[tri.z];
 
-			n[0] = verts[indices[i].x+1];
-			n[1] = verts[indices[i].y+1];
-			n[2] = verts[indices[i].z+1];
+			n[0] = verts[tri.x+1];
+			n[1] = verts[tri.y+1];
+			n[2] = verts[tri.z+1];
 
 			isect->prim = patchAddr;
 			isect->object = object;
@@ -289,6 +290,7 @@ ccl_device_inline bool subpatch_intersect(KernelGlobals *kg,
 				break;
 		}
 	}
+	SUBPATCH_BVH_INTERSECT_LOOP_END()
 
 	if(hit) {
 		/* store cached triangle since subpatch data may be invalid after leaving this function */
@@ -306,6 +308,7 @@ ccl_device_inline bool subpatch_intersect_shadow(KernelGlobals *kg,
                                                  uint *num_hits,
                                                  float isect_t,
                                                  float3 P,
+                                                 float3 dir,
                                                  int object,
                                                  int patchAddr)
 {
@@ -313,25 +316,23 @@ ccl_device_inline bool subpatch_intersect_shadow(KernelGlobals *kg,
 	TessellatedSubPatch* subpatch = geom_cache_get_subpatch(kg, object, kernel_tex_fetch(__prim_index, patchAddr));
 
 	float4* verts = &subpatch->data[subpatch->vert_offset];
-	uint4* indices = (uint4*)&subpatch->data[subpatch->tri_offset];
 
 	float4 v[3];
 	float4 n[3];
 	bool hit = false;
 
-	/* TODO(mai): implement bvh for subpatches */
-	/* test triangles */
-	for(int i = 0; i < subpatch->num_triangles; i++) {
+	SUBPATCH_BVH_INTERSECT_LOOP_BEGIN(kg, isect_precalc, isect_t, P, dir, subpatch, tri)
+	{
 		if(subpatch_triangle_intersect(kg, isect_precalc, *isect_array, P,
-				verts[indices[i].x], verts[indices[i].y], verts[indices[i].z]))
+				verts[tri.x], verts[tri.y], verts[tri.z]))
 		{
-			v[0] = verts[indices[i].x];
-			v[1] = verts[indices[i].y];
-			v[2] = verts[indices[i].z];
+			v[0] = verts[tri.x];
+			v[1] = verts[tri.y];
+			v[2] = verts[tri.z];
 
-			n[0] = verts[indices[i].x+1];
-			n[1] = verts[indices[i].y+1];
-			n[2] = verts[indices[i].z+1];
+			n[0] = verts[tri.x+1];
+			n[1] = verts[tri.y+1];
+			n[2] = verts[tri.z+1];
 
 			(*isect_array)->prim = patchAddr;
 			(*isect_array)->object = object;
@@ -363,6 +364,7 @@ ccl_device_inline bool subpatch_intersect_shadow(KernelGlobals *kg,
 			(*isect_array)->t = isect_t;
 		}
 	}
+	SUBPATCH_BVH_INTERSECT_LOOP_END()
 
 	geom_cache_release_subpatch(kg, subpatch);
 	return hit;
@@ -391,25 +393,23 @@ ccl_device_inline bool subpatch_intersect_volume_all(KernelGlobals *kg,
 	TessellatedSubPatch* subpatch = geom_cache_get_subpatch(kg, object, kernel_tex_fetch(__prim_index, patchAddr));
 
 	float4* verts = &subpatch->data[subpatch->vert_offset];
-	uint4* indices = (uint4*)&subpatch->data[subpatch->tri_offset];
 
 	float4 v[3];
 	float4 n[3];
 	bool hit = false;
 
-	/* TODO(mai): implement bvh for subpatches */
-	/* test triangles */
-	for(int i = 0; i < subpatch->num_triangles; i++) {
+	SUBPATCH_BVH_INTERSECT_LOOP_BEGIN(kg, isect_precalc, isect_t, P, dir, subpatch, tri)
+	{
 		if(subpatch_triangle_intersect(kg, isect_precalc, *isect_array, P,
-				verts[indices[i].x], verts[indices[i].y], verts[indices[i].z]))
+				verts[tri.x], verts[tri.y], verts[tri.z]))
 		{
-			v[0] = verts[indices[i].x];
-			v[1] = verts[indices[i].y];
-			v[2] = verts[indices[i].z];
+			v[0] = verts[tri.x];
+			v[1] = verts[tri.y];
+			v[2] = verts[tri.z];
 
-			n[0] = verts[indices[i].x+1];
-			n[1] = verts[indices[i].y+1];
-			n[2] = verts[indices[i].z+1];
+			n[0] = verts[tri.x+1];
+			n[1] = verts[tri.y+1];
+			n[2] = verts[tri.z+1];
 
 			(*isect_array)->prim = patchAddr;
 			(*isect_array)->object = object;
@@ -442,22 +442,23 @@ ccl_device_inline bool subpatch_intersect_volume_all(KernelGlobals *kg,
 			}
 		}
 	}
+	SUBPATCH_BVH_INTERSECT_LOOP_END()
 
 	geom_cache_release_subpatch(kg, subpatch);
 	return hit;
 }
 
 #ifdef __SUBSURFACE__
-ccl_device_inline void subpatch_intersect_subsurface(
-        KernelGlobals *kg,
-        const IsectPrecalc *isect_precalc,
-        SubsurfaceIntersection *ss_isect,
-        float3 P,
-        int object,
-        int patchAddr,
-        float tmax,
-        uint *lcg_state,
-        int max_hits)
+ccl_device_inline void subpatch_intersect_subsurface(KernelGlobals *kg,
+                                                     const IsectPrecalc *isect_precalc,
+                                                     SubsurfaceIntersection *ss_isect,
+                                                     float3 P,
+                                                     float3 dir,
+                                                     int object,
+                                                     int patchAddr,
+                                                     float tmax,
+                                                     uint *lcg_state,
+                                                     int max_hits)
 {
 #if 0 /*__VISIBILITY_FLAG__*/
 	if(kernel_tex_fetch(__prim_visibility, patchAddr) & visibility)
@@ -468,25 +469,23 @@ ccl_device_inline void subpatch_intersect_subsurface(
 	TessellatedSubPatch* subpatch = geom_cache_get_subpatch(kg, object, kernel_tex_fetch(__prim_index, patchAddr));
 
 	float4* verts = &subpatch->data[subpatch->vert_offset];
-	uint4* indices = (uint4*)&subpatch->data[subpatch->tri_offset];
 
 	float4 v[3];
 	float4 n[3];
 	Intersection *isect;
 
-	/* TODO(mai): implement bvh for subpatches */
-	/* test triangles */
-	for(int i = 0; i < subpatch->num_triangles; i++) {
+	SUBPATCH_BVH_INTERSECT_LOOP_BEGIN(kg, isect_precalc, tmax, P, dir, subpatch, tri)
+	{
 		if(( isect = subpatch_triangle_intersect_subsurface(kg, isect_precalc, ss_isect, P, tmax, lcg_state, max_hits,
-				verts[indices[i].x], verts[indices[i].y], verts[indices[i].z]) ))
+				verts[tri.x], verts[tri.y], verts[tri.z]) ))
 		{
-			v[0] = verts[indices[i].x];
-			v[1] = verts[indices[i].y];
-			v[2] = verts[indices[i].z];
+			v[0] = verts[tri.x];
+			v[1] = verts[tri.y];
+			v[2] = verts[tri.z];
 
-			n[0] = verts[indices[i].x+1];
-			n[1] = verts[indices[i].y+1];
-			n[2] = verts[indices[i].z+1];
+			n[0] = verts[tri.x+1];
+			n[1] = verts[tri.y+1];
+			n[2] = verts[tri.z+1];
 
 			isect->prim = patchAddr;
 			isect->object = object;
@@ -496,6 +495,7 @@ ccl_device_inline void subpatch_intersect_subsurface(
 			subpatch_intersect_store_cache_triangle(isect, subpatch, v, n);
 		}
 	}
+	SUBPATCH_BVH_INTERSECT_LOOP_END()
 
 	geom_cache_release_subpatch(kg, subpatch);
 }
