@@ -78,8 +78,9 @@ public:
 		int edge_factors[4];
 		float2 uv[4];
 		BoundBox bounds;
+		int cached_num_triangles, cached_tessellated_size;
 
-		SubPatch() : bounds(BoundBox::empty) {}
+		SubPatch() : bounds(BoundBox::empty), cached_num_triangles(-1), cached_tessellated_size(-1) {}
 
 		bool is_quad() const { return edge_factors[3] != -1; }
 
@@ -218,7 +219,7 @@ public:
 	void free_osd_data();
 
 	void split_patches(DiagSplit *split);
-	void diced_subpatch_size(int subpatch_id, uint* num_verts, uint* num_tris);
+	void diced_subpatch_size(int subpatch_id, uint* num_verts, uint* num_tris, int* total_size);
 	void dice_subpatch(TessellatedSubPatch* diced, int subpatch_id);
 };
 

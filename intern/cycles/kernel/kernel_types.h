@@ -551,6 +551,7 @@ typedef struct TessellatedSubPatch {
 	uint shader;
 	bool smooth;
 
+	int num_verts;
 	int num_triangles;
 
 	// offsets into data

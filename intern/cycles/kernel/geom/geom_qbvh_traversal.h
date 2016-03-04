@@ -354,7 +354,7 @@ ccl_device bool BVH_FUNCTION_FULL_NAME(QBVH)(KernelGlobals *kg,
 								isect->num_traversal_steps++;
 #endif
 								kernel_assert(kernel_tex_fetch(__prim_type, primAddr) == type);
-								if(subpatch_intersect(kg, &isect_precalc, isect, P, visibility, object, primAddr)) {
+								if(subpatch_intersect(kg, &isect_precalc, isect, P, dir, visibility, object, primAddr)) {
 									tfar = ssef(isect->t);
 									/* shadow ray early termination */
 									if(visibility == PATH_RAY_SHADOW_OPAQUE)

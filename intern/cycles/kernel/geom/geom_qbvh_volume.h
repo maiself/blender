@@ -279,7 +279,7 @@ ccl_device bool BVH_FUNCTION_FULL_NAME(QBVH)(KernelGlobals *kg,
 									continue;
 								}
 								/* Intersect ray against primitive. */
-								subpatch_intersect(kg, &isect_precalc, isect, P, visibility, object, primAddr);
+								subpatch_intersect(kg, &isect_precalc, isect, P, dir, visibility, object, primAddr);
 							}
 							break;
 						}

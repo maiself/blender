@@ -156,6 +156,8 @@ set(SRC_GEOM_HEADERS
 	geom/geom_qbvh_traversal.h
 	geom/geom_qbvh_volume.h
 	geom/geom_qbvh_volume_all.h
+	geom/geom_subpatch.h
+	geom/geom_subpatch_bvh.h
 	geom/geom_triangle.h
 	geom/geom_triangle_intersect.h
 	geom/geom_volume.h
@@ -163,6 +165,7 @@ set(SRC_GEOM_HEADERS
 
 set(SRC_UTIL_HEADERS
 	../util/util_atomic.h
+	../util/util_bvh.h
 	../util/util_color.h
 	../util/util_half.h
 	../util/util_math.h
