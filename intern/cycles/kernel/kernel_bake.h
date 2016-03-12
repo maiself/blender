@@ -309,7 +309,7 @@ ccl_device void kernel_bake_evaluate(KernelGlobals *kg, ccl_global uint4 *input,
 	/* light passes */
 	PathRadiance L;
 
-	shader_setup_from_sample(kg, &sd, P, Ng, I, shader, object, prim, u, v, t, time);
+	shader_setup_from_sample(kg, &sd, P, Ng, I, shader, object, prim, PRIMITIVE_TRIANGLE, u, v, t, time);
 	sd.I = sd.N;
 
 	/* update differentials */
@@ -502,15 +502,22 @@ ccl_device void kernel_shader_evaluate(KernelGlobals *kg,
 		/* setup shader data */
 		int object = in.x;
 		int prim = in.y;
-		float u = __uint_as_float(in.z);
-		float v = __uint_as_float(in.w);
+		if(prim >= 0) {
+			float u = __uint_as_float(in.z);
+			float v = __uint_as_float(in.w);
 
-		shader_setup_from_displace(kg, &sd, object, prim, u, v);
+			shader_setup_from_displace(kg, &sd, object, prim, u, v);
 
-		/* evaluate */
-		float3 P = sd.P;
-		shader_eval_displacement(kg, &sd, &state, SHADER_CONTEXT_MAIN);
-		out = sd.P - P;
+			/* evaluate */
+			float3 P = sd.P;
+			shader_eval_displacement(kg, &sd, &state, SHADER_CONTEXT_MAIN);
+			out = sd.P - P;
+		}
+		else {
+			prim = -prim-1;
+
+			geom_cache_sample_subpatch_vert_displacement(kg, object, prim, in.z, &out);
+		}
 	}
 	else { // SHADER_EVAL_BACKGROUND
 		/* setup ray */

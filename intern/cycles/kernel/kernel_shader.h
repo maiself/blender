@@ -237,7 +237,7 @@ ccl_device void shader_setup_from_sample(KernelGlobals *kg,
                                          const float3 P,
                                          const float3 Ng,
                                          const float3 I,
-                                         int shader, int object, int prim,
+                                         int shader, int object, int prim, int type,
                                          float u, float v, float t,
                                          float time)
 {
@@ -247,7 +247,7 @@ ccl_device void shader_setup_from_sample(KernelGlobals *kg,
 	ccl_fetch(sd, Ng) = Ng;
 	ccl_fetch(sd, I) = I;
 	ccl_fetch(sd, shader) = shader;
-	ccl_fetch(sd, type) = (prim == PRIM_NONE)? PRIMITIVE_NONE: PRIMITIVE_TRIANGLE;
+	ccl_fetch(sd, type) = (prim == PRIM_NONE)? PRIMITIVE_NONE: type;
 
 	/* primitive */
 #ifdef __INSTANCING__
@@ -311,6 +311,28 @@ ccl_device void shader_setup_from_sample(KernelGlobals *kg,
 #  endif
 #endif
 	}
+	else if(ccl_fetch(sd, type) & PRIMITIVE_CACHE_TRIANGLE) {
+		CacheTriangle tri;
+
+		tri.patch = 0; // TODO(mai): set cache triangle patch
+
+		tri.verts[0] = make_float3(0.0f, 0.0f, 0.0f);
+		make_orthonormals(ccl_fetch(sd, Ng), &tri.verts[1], &tri.verts[2]);
+
+		for(int i = 0; i < 3; i++) {
+			tri.verts[i] += ccl_fetch(sd, P);
+			tri.normals[i] = ccl_fetch(sd, Ng);
+			tri.uv[i] = make_float2(ccl_fetch(sd, u), ccl_fetch(sd, v));
+		}
+
+		ccl_fetch(sd, cache_triangle) = tri;
+
+		/* dPdu/dPdv */
+#ifdef __DPDU__
+		ccl_fetch(sd, dPdu) = tri.verts[1] - tri.verts[0];
+		ccl_fetch(sd, dPdv) = tri.verts[2] - tri.verts[0];
+#endif
+	}
 	else {
 #ifdef __DPDU__
 		ccl_fetch(sd, dPdu) = make_float3(0.0f, 0.0f, 0.0f);
@@ -357,7 +379,7 @@ ccl_device void shader_setup_from_displace(KernelGlobals *kg, ShaderData *sd,
 
 	/* watch out: no instance transform currently */
 
-	shader_setup_from_sample(kg, sd, P, Ng, I, shader, object, prim, u, v, 0.0f, TIME_INVALID);
+	shader_setup_from_sample(kg, sd, P, Ng, I, shader, object, prim, PRIMITIVE_TRIANGLE, u, v, 0.0f, TIME_INVALID);
 }
 
 /* ShaderData setup from ray into background */
