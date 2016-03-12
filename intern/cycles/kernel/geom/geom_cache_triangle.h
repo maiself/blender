@@ -133,6 +133,10 @@ ccl_device_inline float3 cache_triangle_refine_subsurface(KernelGlobals *kg,
 	return P;
 }
 
+ccl_device_inline float3 cache_triangle_smooth_normal(KernelGlobals *kg, CacheTriangle *tri, float u, float v)
+{
+	return normalize(u*tri->normals[0] + v*tri->normals[1] + (1.0f-u-v)*tri->normals[2]);
+}
 
 ccl_device_noinline void cache_triangle_shader_setup(KernelGlobals *kg, ShaderData *sd, const Intersection *isect, const Ray *ray, bool subsurface)
 {
@@ -160,7 +164,7 @@ ccl_device_noinline void cache_triangle_shader_setup(KernelGlobals *kg, ShaderDa
 
 	ccl_fetch(sd, Ng) = Ng;
 	if(ccl_fetch(sd, shader) & SHADER_SMOOTH_NORMAL)
-		ccl_fetch(sd, N) = normalize(isect->u*tri->normals[0] + isect->v*tri->normals[1] + (1.0f-isect->u-isect->v)*tri->normals[2]);
+		ccl_fetch(sd, N) = cache_triangle_smooth_normal(kg, tri, isect->u, isect->v);
 	else
 		ccl_fetch(sd, N) = Ng;
 

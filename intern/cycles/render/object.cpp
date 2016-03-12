@@ -463,6 +463,11 @@ void ObjectManager::device_update_flags(Device *device,
 			 */
 			object_flag[object_index] |= SD_OBJECT_INTERSECTS_VOLUME;
 		}
+
+		if(object->mesh->displacement_method != Mesh::DISPLACE_BUMP) {
+			object_flag[object_index] |= SD_OBJECT_HAS_DISPLACEMENT;
+		}
+
 		++object_index;
 	}
 

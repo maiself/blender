@@ -1286,11 +1286,6 @@ void MeshManager::device_update(Device *device, DeviceScene *dscene, Scene *scen
 	geom_cache_set_scene(geom_cache, scene);
 	geom_cache_set_max_size(geom_cache, scene->params.geom_cache_max_size);
 
-	if(need_clear_geom_cache) {
-		geom_cache_clear(device->get_geom_cache());
-		need_clear_geom_cache = false;
-	}
-
 	/* update normals */
 	foreach(Mesh *mesh, scene->meshes) {
 		foreach(uint shader, mesh->used_shaders) {
@@ -1340,9 +1335,12 @@ void MeshManager::device_update(Device *device, DeviceScene *dscene, Scene *scen
 	/* update displacement */
 	bool displacement_done = false;
 
-	foreach(Mesh *mesh, scene->meshes)
-		if(mesh->need_update && displace(device, dscene, scene, mesh, progress))
-			displacement_done = true;
+	foreach(Mesh *mesh, scene->meshes) {
+		if(mesh->need_update && mesh->displacement_method != Mesh::DISPLACE_BUMP) {
+			if(displace(device, dscene, scene, mesh, progress))
+				displacement_done = true;
+		}
+	}
 
 	/* todo: properly handle cancel halfway displacement */
 	if(progress.get_cancel()) return;
@@ -1382,7 +1380,9 @@ void MeshManager::device_update(Device *device, DeviceScene *dscene, Scene *scen
 				mesh->dice_subpatch(diced, i);
 
 				// displace
-				// TODO(mai): implement
+				Shader *shader = scene->shaders[mesh->patches[subpatch->patch].shader];
+				if(mesh->displacement_method != Mesh::DISPLACE_BUMP && shader->has_displacement)
+					displace_subpatch(device, dscene, scene, mesh, progress, diced, i);
 
 				// grow bounds
 				subpatch->bounds = BoundBox::empty;
@@ -1428,6 +1428,11 @@ void MeshManager::device_update(Device *device, DeviceScene *dscene, Scene *scen
 
 	foreach(Shader *shader, scene->shaders)
 		shader->need_update_attributes = false;
+
+	if(need_clear_geom_cache) {
+		geom_cache_clear(device->get_geom_cache());
+		need_clear_geom_cache = false;
+	}
 
 #ifdef __OBJECT_MOTION__
 	Scene::MotionType need_motion = scene->need_motion(device->info.advanced_shading);

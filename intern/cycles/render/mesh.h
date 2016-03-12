@@ -237,6 +237,8 @@ public:
 	~MeshManager();
 
 	bool displace(Device *device, DeviceScene *dscene, Scene *scene, Mesh *mesh, Progress& progress);
+	bool displace_subpatch(Device *device, DeviceScene *dscene, Scene *scene, Mesh *mesh, Progress& progress,
+		TessellatedSubPatch* subpatch, int subpatch_id);
 
 	/* attributes */
 	void update_osl_attributes(Device *device, Scene *scene, vector<AttributeRequestSet>& mesh_attributes);

@@ -761,10 +761,11 @@ enum ShaderDataFlag {
 	SD_OBJECT_HAS_VOLUME        = (1 << 24),  /* object has a volume shader */
 	SD_OBJECT_INTERSECTS_VOLUME = (1 << 25),  /* object intersects AABB of an object with volume shader */
 	SD_OBJECT_HAS_VERTEX_MOTION = (1 << 26),  /* has position for motion vertices */
+	SD_OBJECT_HAS_DISPLACEMENT  = (1 << 27),  /* mesh has displacement */
 
 	SD_OBJECT_FLAGS = (SD_HOLDOUT_MASK|SD_OBJECT_MOTION|SD_TRANSFORM_APPLIED|
 	                   SD_NEGATIVE_SCALE_APPLIED|SD_OBJECT_HAS_VOLUME|
-	                   SD_OBJECT_INTERSECTS_VOLUME)
+	                   SD_OBJECT_INTERSECTS_VOLUME|SD_OBJECT_HAS_DISPLACEMENT)
 };
 
 struct KernelGlobals;

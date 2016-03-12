@@ -140,6 +140,31 @@ static void geom_cache_update_subpatch_size(GeomCache* geom_cache, int object, i
 	mesh->subpatches[prim].cached_tessellated_size = size;
 }
 
+static void _geom_cache_sample_subpatch_vert(TessellatedSubPatch *subpatch, int vert, float3 *P, float3 *N, float *u, float *v, int *shader)
+{
+	float4* _v = &subpatch->data[subpatch->vert_offset+vert*2];
+	float4* _n = &subpatch->data[subpatch->vert_offset+vert*2+1];
+
+	*P = float4_to_float3(*_v);
+	*N = float4_to_float3(*_n);
+	*shader = subpatch->shader;
+
+	/* uv within patch */
+	float2 uv = make_float2(_v->w, _n->w);
+#if 0
+	if(subpatch_is_quad(subpatch)) {
+		uv = interp(interp(subpatch->uv[0], subpatch->uv[1], uv.x),
+				           interp(subpatch->uv[2], subpatch->uv[3], uv.x), uv.y);
+	}
+	else {
+		uv = uv.x*subpatch->uv[0] + uv.y*subpatch->uv[1] + (1.0f-uv.x-uv.y)*subpatch->uv[2];
+	}
+#endif
+
+	*u = uv.x;
+	*v = uv.y;
+}
+
 TessellatedSubPatch* geom_cache_get_subpatch(KernelGlobals *kg, int object, int prim)
 {
 	GeomCache* geom_cache = kg->geom_cache;
@@ -151,6 +176,12 @@ TessellatedSubPatch* geom_cache_get_subpatch(KernelGlobals *kg, int object, int 
 	GeomCache::lru_t::ref_t ref;
 
 	if(!lru->find_or_lock(key, ref, tdata->lru_tdata)) {
+		bool sample_displacement = false;
+		if(object & 0x80000000) {
+			object &= 0x7fffffff;
+			sample_displacement = true;
+		}
+
 		// get patch size
 		uint num_verts, num_tris, bvh_size = 0;
 		int total_size = -1;
@@ -182,15 +213,52 @@ TessellatedSubPatch* geom_cache_get_subpatch(KernelGlobals *kg, int object, int 
 		geom_cache_dice_subpatch(geom_cache, subpatch, object, prim);
 
 		// displace
-		// TODO(mai): implement
+		if(kernel_tex_fetch(__object_flag, object) & SD_OBJECT_HAS_DISPLACEMENT) {
+			for(int i = 0; i < num_verts; i++) {
+				float3 P, Ng, I = make_float3(0.0f, 0.0f, 0.0f);
+				float u, v;
+				int shader;
 
-		// build bvh
-		bvh_size = subpatch_build_bvh(subpatch, bvh_size);
+				_geom_cache_sample_subpatch_vert(subpatch, i, &P, &Ng, &u, &v, &shader);
 
-		// update size for next time
-		if(total_size < 0) {
-			size = sizeof(TessellatedSubPatch) + sizeof(float4)*(num_verts*2 + subpatch->num_triangles + bvh_size);
-			geom_cache_update_subpatch_size(geom_cache, object, prim, size);
+				shader |= SHADER_SMOOTH_NORMAL;
+
+				ShaderData sd;
+				shader_setup_from_sample(kg, &sd, P, Ng, I, shader, object, prim, PRIMITIVE_CACHE_TRIANGLE,
+					u, v, 0.0f, TIME_INVALID);
+
+				// TODO(mai): move this into shader_setup_from_sample
+				sd.cache_triangle.patch = subpatch->patch;
+				for(int j = 0; j < 4; j++) {
+					sd.cache_triangle.v[j] = subpatch->v[j];
+				}
+
+				/* evaluate */
+				PathState state = {0};
+				shader_eval_displacement(kg, &sd, &state, SHADER_CONTEXT_MAIN);
+
+				float4* vert = &subpatch->data[subpatch->vert_offset+i*2];
+
+				if(!sample_displacement) {
+					*vert = make_float4(sd.P.x, sd.P.y, sd.P.z, vert->w);
+				}
+				else {
+					*vert = make_float4(sd.P.x-vert->x, sd.P.y-vert->y, sd.P.z-vert->z, vert->w);
+				}
+
+				*(vert+1) = make_float4(sd.N.x, sd.N.y, sd.N.z, (vert+1)->w);
+			}
+		}
+
+		if(!sample_displacement) {
+			// build bvh
+			bvh_size = subpatch_build_bvh(subpatch, bvh_size);
+
+			// update size for next time
+			if(total_size < 0) {
+				size = sizeof(TessellatedSubPatch) + sizeof(float4)*(num_verts*2 + subpatch->num_triangles + bvh_size);
+				geom_cache_update_subpatch_size(geom_cache, object, prim, size);
+			}
 		}
 
 		// signal subpatch completion
@@ -210,6 +278,20 @@ void geom_cache_release_subpatch(KernelGlobals *kg, TessellatedSubPatch *subpatc
 
 	GeomCache::lru_t::ref_t ref(wraper);
 	ref.dec(); /* extra unref to cause subpatch to dellocated when scope ends (if ref not held elsewhere) */
+}
+
+void geom_cache_sample_subpatch_vert(KernelGlobals *kg, int object, int prim, int vert, float3 *P, float3 *N, float *u, float *v, int *shader)
+{
+	TessellatedSubPatch* subpatch = geom_cache_get_subpatch(kg, object, prim);
+	_geom_cache_sample_subpatch_vert(subpatch, vert, P, N, u, v, shader);
+	geom_cache_release_subpatch(kg, subpatch);
+}
+
+void geom_cache_sample_subpatch_vert_displacement(KernelGlobals *kg, int object, int prim, int vert, float3 *dP)
+{
+	TessellatedSubPatch* subpatch = geom_cache_get_subpatch(kg, object | 0x80000000, prim);
+	*dP = float4_to_float3(subpatch->data[subpatch->vert_offset + vert*2]);
+	geom_cache_release_subpatch(kg, subpatch);
 }
 
 CCL_NAMESPACE_END

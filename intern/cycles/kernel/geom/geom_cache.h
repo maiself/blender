@@ -20,6 +20,7 @@ struct GeomCache;
 
 GeomCache* geom_cache_create();
 void geom_cache_release(GeomCache *geom_cache);
+
 void geom_cache_set_scene(GeomCache *geom_cache, void *scene);
 void geom_cache_thread_init(KernelGlobals *kg, GeomCache *geom_cache);
 void geom_cache_clear(GeomCache *geom_cache);
@@ -27,6 +28,10 @@ void geom_cache_set_max_size(GeomCache * geom_cache, uint max_size);
 
 TessellatedSubPatch* geom_cache_get_subpatch(KernelGlobals *kg, int object, int prim);
 void geom_cache_release_subpatch(KernelGlobals *kg, TessellatedSubPatch *subpatch);
+
+void geom_cache_sample_subpatch_vert(KernelGlobals *kg, int object, int prim, int vert, float3 *P, float3 *N,
+                                     float *u, float *v, int *shader);
+void geom_cache_sample_subpatch_vert_displacement(KernelGlobals *kg, int object, int prim, int vert, float3 *dP);
 
 CCL_NAMESPACE_END
 
