@@ -175,5 +175,182 @@ ccl_device_noinline void cache_triangle_shader_setup(KernelGlobals *kg, ShaderDa
 #endif
 }
 
+ccl_device float cache_triangle_attribute_float(KernelGlobals *kg, const ShaderData *sd, AttributeElement elem, int offset, float *dx, float *dy)
+{
+	if(elem == ATTR_ELEMENT_FACE) {
+		if(dx) *dx = 0.0f;
+		if(dy) *dy = 0.0f;
+
+		return kernel_tex_fetch(__attributes_float, offset + ccl_fetch(sd, prim));
+	}
+	else if(elem == ATTR_ELEMENT_VERTEX || elem == ATTR_ELEMENT_VERTEX_MOTION) {
+		float2 uv[3];
+		for(int i = 0; i < 3; i++) {
+			uv[i] = ccl_fetch(sd, cache_triangle).uv[i];
+		}
+
+		float a, b, c;
+
+		float f0 = kernel_tex_fetch(__attributes_float, offset + ccl_fetch(sd, cache_triangle).v[0]);
+		float f1 = kernel_tex_fetch(__attributes_float, offset + ccl_fetch(sd, cache_triangle).v[1]);
+		float f2 = kernel_tex_fetch(__attributes_float, offset + ccl_fetch(sd, cache_triangle).v[2]);
+
+		if(cache_triangle_patch_is_quad(kg, sd)) {
+			float f3 = kernel_tex_fetch(__attributes_float, offset + ccl_fetch(sd, cache_triangle).v[3]);
+
+			a = interp(interp(f0, f1, uv[0].x), interp(f3, f2, uv[0].x), uv[0].y);
+			b = interp(interp(f0, f1, uv[1].x), interp(f3, f2, uv[1].x), uv[1].y);
+			c = interp(interp(f0, f1, uv[2].x), interp(f3, f2, uv[2].x), uv[2].y);
+		}
+		else {
+			a = uv[0].x*f0 + uv[0].y*f1 + (1.0f - uv[0].x - uv[0].y)*f2;
+			b = uv[1].x*f0 + uv[1].y*f1 + (1.0f - uv[1].x - uv[1].y)*f2;
+			c = uv[2].x*f0 + uv[2].y*f1 + (1.0f - uv[2].x - uv[2].y)*f2;
+		}
+
+#ifdef __RAY_DIFFERENTIALS__
+		if(dx) *dx = ccl_fetch(sd, du).dx*a + ccl_fetch(sd, dv).dx*b - (ccl_fetch(sd, du).dx + ccl_fetch(sd, dv).dx)*c;
+		if(dy) *dy = ccl_fetch(sd, du).dy*a + ccl_fetch(sd, dv).dy*b - (ccl_fetch(sd, du).dy + ccl_fetch(sd, dv).dy)*c;
+#endif
+
+		return ccl_fetch(sd, u)*a + ccl_fetch(sd, v)*b + (1.0f - ccl_fetch(sd, u) - ccl_fetch(sd, v))*c;
+	}
+	else if(elem == ATTR_ELEMENT_CORNER) {
+		int patch = offset + (ccl_fetch(sd, cache_triangle).patch & 0x7fffffff)*4;
+
+		float2 uv[3];
+		for(int i = 0; i < 3; i++) {
+			uv[i] = ccl_fetch(sd, cache_triangle).uv[i];
+		}
+
+		float a, b, c;
+
+		float f0 = kernel_tex_fetch(__attributes_float, patch + 0);
+		float f1 = kernel_tex_fetch(__attributes_float, patch + 1);
+		float f2 = kernel_tex_fetch(__attributes_float, patch + 2);
+
+		if(cache_triangle_patch_is_quad(kg, sd)) {
+			float f3 = kernel_tex_fetch(__attributes_float, patch + 3);
+
+			a = interp(interp(f0, f1, uv[0].x), interp(f3, f2, uv[0].x), uv[0].y);
+			b = interp(interp(f0, f1, uv[1].x), interp(f3, f2, uv[1].x), uv[1].y);
+			c = interp(interp(f0, f1, uv[2].x), interp(f3, f2, uv[2].x), uv[2].y);
+		}
+		else {
+			a = uv[0].x*f0 + uv[0].y*f1 + (1.0f - uv[0].x - uv[0].y)*f2;
+			b = uv[1].x*f0 + uv[1].y*f1 + (1.0f - uv[1].x - uv[1].y)*f2;
+			c = uv[2].x*f0 + uv[2].y*f1 + (1.0f - uv[2].x - uv[2].y)*f2;
+		}
+
+#ifdef __RAY_DIFFERENTIALS__
+		if(dx) *dx = ccl_fetch(sd, du).dx*a + ccl_fetch(sd, dv).dx*b - (ccl_fetch(sd, du).dx + ccl_fetch(sd, dv).dx)*c;
+		if(dy) *dy = ccl_fetch(sd, du).dy*a + ccl_fetch(sd, dv).dy*b - (ccl_fetch(sd, du).dy + ccl_fetch(sd, dv).dy)*c;
+#endif
+
+		return ccl_fetch(sd, u)*a + ccl_fetch(sd, v)*b + (1.0f - ccl_fetch(sd, u) - ccl_fetch(sd, v))*c;
+	}
+	else {
+		if(dx) *dx = 0.0f;
+		if(dy) *dy = 0.0f;
+
+		return 0.0f;
+	}
+}
+
+ccl_device float3 cache_triangle_attribute_float3(KernelGlobals *kg, const ShaderData *sd, AttributeElement elem, int offset, float3 *dx, float3 *dy)
+{
+	if(elem == ATTR_ELEMENT_FACE) {
+		if(dx) *dx = make_float3(0.0f, 0.0f, 0.0f);
+		if(dy) *dy = make_float3(0.0f, 0.0f, 0.0f);
+
+		return float4_to_float3(kernel_tex_fetch(__attributes_float3, offset + ccl_fetch(sd, prim)));
+	}
+	else if(elem == ATTR_ELEMENT_VERTEX || elem == ATTR_ELEMENT_VERTEX_MOTION) {
+		float2 uv[3];
+		for(int i = 0; i < 3; i++) {
+			uv[i] = ccl_fetch(sd, cache_triangle).uv[i];
+		}
+
+		float3 a, b, c;
+
+		float3 f0 = float4_to_float3(kernel_tex_fetch(__attributes_float3, offset + ccl_fetch(sd, cache_triangle).v[0]));
+		float3 f1 = float4_to_float3(kernel_tex_fetch(__attributes_float3, offset + ccl_fetch(sd, cache_triangle).v[1]));
+		float3 f2 = float4_to_float3(kernel_tex_fetch(__attributes_float3, offset + ccl_fetch(sd, cache_triangle).v[2]));
+
+		if(cache_triangle_patch_is_quad(kg, sd)) {
+			float3 f3 = float4_to_float3(kernel_tex_fetch(__attributes_float3, offset + ccl_fetch(sd, cache_triangle).v[3]));
+
+			a = interp(interp(f0, f1, uv[0].x), interp(f3, f2, uv[0].x), uv[0].y);
+			b = interp(interp(f0, f1, uv[1].x), interp(f3, f2, uv[1].x), uv[1].y);
+			c = interp(interp(f0, f1, uv[2].x), interp(f3, f2, uv[2].x), uv[2].y);
+		}
+		else {
+			a = uv[0].x*f0 + uv[0].y*f1 + (1.0f - uv[0].x - uv[0].y)*f2;
+			b = uv[1].x*f0 + uv[1].y*f1 + (1.0f - uv[1].x - uv[1].y)*f2;
+			c = uv[2].x*f0 + uv[2].y*f1 + (1.0f - uv[2].x - uv[2].y)*f2;
+		}
+
+#ifdef __RAY_DIFFERENTIALS__
+		if(dx) *dx = ccl_fetch(sd, du).dx*a + ccl_fetch(sd, dv).dx*b - (ccl_fetch(sd, du).dx + ccl_fetch(sd, dv).dx)*c;
+		if(dy) *dy = ccl_fetch(sd, du).dy*a + ccl_fetch(sd, dv).dy*b - (ccl_fetch(sd, du).dy + ccl_fetch(sd, dv).dy)*c;
+#endif
+
+		return ccl_fetch(sd, u)*a + ccl_fetch(sd, v)*b + (1.0f - ccl_fetch(sd, u) - ccl_fetch(sd, v))*c;
+	}
+	else if(elem == ATTR_ELEMENT_CORNER || elem == ATTR_ELEMENT_CORNER_BYTE) {
+		int patch = offset + (ccl_fetch(sd, cache_triangle).patch & 0x7fffffff)*4;
+
+		float2 uv[3];
+		for(int i = 0; i < 3; i++) {
+			uv[i] = ccl_fetch(sd, cache_triangle).uv[i];
+		}
+
+		float3 a, b, c;
+		float3 f0, f1, f2, f3;
+
+		if(elem == ATTR_ELEMENT_CORNER) {
+			f0 = float4_to_float3(kernel_tex_fetch(__attributes_float3, patch + 0));
+			f1 = float4_to_float3(kernel_tex_fetch(__attributes_float3, patch + 1));
+			f2 = float4_to_float3(kernel_tex_fetch(__attributes_float3, patch + 2));
+		}
+		else {
+			f0 = color_byte_to_float(kernel_tex_fetch(__attributes_uchar4, patch + 0));
+			f1 = color_byte_to_float(kernel_tex_fetch(__attributes_uchar4, patch + 1));
+			f2 = color_byte_to_float(kernel_tex_fetch(__attributes_uchar4, patch + 2));
+		}
+
+		if(cache_triangle_patch_is_quad(kg, sd)) {
+			if(elem == ATTR_ELEMENT_CORNER) {
+				f3 = float4_to_float3(kernel_tex_fetch(__attributes_float3, patch + 3));
+			}
+			else {
+				f3 = color_byte_to_float(kernel_tex_fetch(__attributes_uchar4, patch + 3));
+			}
+
+			a = interp(interp(f0, f1, uv[0].x), interp(f3, f2, uv[0].x), uv[0].y);
+			b = interp(interp(f0, f1, uv[1].x), interp(f3, f2, uv[1].x), uv[1].y);
+			c = interp(interp(f0, f1, uv[2].x), interp(f3, f2, uv[2].x), uv[2].y);
+		}
+		else {
+			a = uv[0].x*f0 + uv[0].y*f1 + (1.0f - uv[0].x - uv[0].y)*f2;
+			b = uv[1].x*f0 + uv[1].y*f1 + (1.0f - uv[1].x - uv[1].y)*f2;
+			c = uv[2].x*f0 + uv[2].y*f1 + (1.0f - uv[2].x - uv[2].y)*f2;
+		}
+
+#ifdef __RAY_DIFFERENTIALS__
+		if(dx) *dx = ccl_fetch(sd, du).dx*a + ccl_fetch(sd, dv).dx*b - (ccl_fetch(sd, du).dx + ccl_fetch(sd, dv).dx)*c;
+		if(dy) *dy = ccl_fetch(sd, du).dy*a + ccl_fetch(sd, dv).dy*b - (ccl_fetch(sd, du).dy + ccl_fetch(sd, dv).dy)*c;
+#endif
+
+		return ccl_fetch(sd, u)*a + ccl_fetch(sd, v)*b + (1.0f - ccl_fetch(sd, u) - ccl_fetch(sd, v))*c;
+	}
+	else {
+		if(dx) *dx = make_float3(0.0f, 0.0f, 0.0f);;
+		if(dy) *dy = make_float3(0.0f, 0.0f, 0.0f);;
+
+		return make_float3(0.0f, 0.0f, 0.0f);;
+	}
+}
+
 CCL_NAMESPACE_END
 

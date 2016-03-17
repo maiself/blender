@@ -147,6 +147,7 @@ public:
 	vector<uint> used_shaders;
 	AttributeSet attributes;
 	AttributeSet curve_attributes;
+	AttributeSet subd_attributes;
 
 	BoundBox bounds;
 	bool transform_applied;
