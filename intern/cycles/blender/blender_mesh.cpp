@@ -668,6 +668,7 @@ static void create_subd_mesh(Scene *scene,
 
 	SubdParams sdparams(mesh, used_shaders[0], true, false);
 	sdparams.dicing_rate = preview ? RNA_float_get(cmesh, "preview_dicing_rate") : RNA_float_get(cmesh, "dicing_rate");
+	sdparams.max_level = RNA_int_get(cmesh, "max_subdivision_level");
 
 	scene->camera->update();
 	sdparams.camera = scene->camera;
