@@ -966,6 +966,12 @@ class CyclesMeshSettings(bpy.types.PropertyGroup):
                 description="Use subdivision in preview render",
                 default=True,
                 )
+        cls.max_subdivision_level = IntProperty(
+                name="Max Subdivision Level",
+                description="",
+                min=0, max=16,
+                default=12,
+                )
 
     @classmethod
     def unregister(cls):

@@ -700,6 +700,8 @@ class Cycles_PT_mesh_displacement(CyclesButtonsPanel, Panel):
             preview_sub = sub.row(align=True)
             preview_sub.prop(cdata, "preview_dicing_rate", text="Preview")
             preview_sub.prop(cdata, "preview_displacement", text="", icon="RESTRICT_VIEW_OFF")
+            sub.separator()
+            sub.prop(cdata, "max_subdivision_level")
 
 class CyclesObject_PT_motion_blur(CyclesButtonsPanel, Panel):
     bl_label = "Motion Blur"
