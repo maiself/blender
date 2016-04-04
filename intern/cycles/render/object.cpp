@@ -310,7 +310,7 @@ void ObjectManager::device_update_transforms(Device *device, DeviceScene *dscene
 		memcpy(&objects[offset+4], &itfm, sizeof(float4)*3);
 		/* OBJECT_PROPERTIES */
 		objects[offset+8] = make_float4(surface_area, pass_id, random_number, __int_as_float(particle_index));
-		objects[offset+9] = make_float4(mesh->displacement_scale, 0, 0, 0);
+		objects[offset+9] = make_float4(mesh->displacement_scale, __int_as_float(mesh->displacement_method), 0, 0);
 
 		if(need_motion == Scene::MOTION_PASS) {
 			/* motion transformations, is world/object space depending if mesh

@@ -248,6 +248,26 @@ TessellatedSubPatch* geom_cache_get_subpatch(KernelGlobals *kg, int object, int 
 
 				*(vert+1) = make_float4(sd.N.x, sd.N.y, sd.N.z, (vert+1)->w);
 			}
+
+			/* TODO(mai): this is only a temporary approximation, proper thing to do is have normals generated from bump */
+			if(object_displacement_method(kg, object) == OBJECT_DISPLACEMENT_TRUE) {
+				float4* verts = &subpatch->data[subpatch->vert_offset];
+				uint4* tris = (uint4*)&subpatch->data[subpatch->tri_offset];
+
+				for(int i = 0; i < subpatch->num_triangles; i++) {
+					uint4 tri = tris[i];
+
+					float3 a = float4_to_float3(verts[tri.x]);
+					float3 b = float4_to_float3(verts[tri.y]);
+					float3 c = float4_to_float3(verts[tri.z]);
+
+					float3 ng = normalize(cross(b-a, c-a));
+
+					for(int j = 0; j < 3; j++){
+						verts[tri[j]+1] = make_float4(ng.x, ng.y, ng.z, verts[tri[j]+1].w);
+					}
+				}
+			}
 		}
 
 		if(!sample_displacement) {
