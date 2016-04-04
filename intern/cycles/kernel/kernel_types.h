@@ -571,6 +571,14 @@ typedef struct CacheTriangle {
 	uint shader;
 } CacheTriangle;
 
+typedef enum ObjectDisplacementMethod {
+	OBJECT_DISPLACEMENT_BUMP = 0,
+	OBJECT_DISPLACEMENT_TRUE,
+	OBJECT_DISPLACEMENT_BOTH,
+
+	OBJECT_DISPLACE_NUM_METHODS
+} ObjectDisplacementMethod;
+
 /* Intersection */
 
 typedef ccl_addr_space struct Intersection {

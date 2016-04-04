@@ -250,6 +250,18 @@ ccl_device_inline float object_displacement_scale(KernelGlobals *kg, int object)
 	return f.x;
 }
 
+/* Displacement method for objects mesh */
+
+ccl_device_inline uint object_displacement_method(KernelGlobals *kg, int object)
+{
+	if(object == OBJECT_NONE)
+		return OBJECT_DISPLACEMENT_BUMP;
+
+	int offset = object*OBJECT_SIZE + OBJECT_PROPERTIES+1;
+	float4 f = kernel_tex_fetch(__objects, offset);
+	return __float_as_uint(f.y);
+}
+
 /* Particle ID from which this object was generated */
 
 ccl_device_inline int object_particle_id(KernelGlobals *kg, int object)
