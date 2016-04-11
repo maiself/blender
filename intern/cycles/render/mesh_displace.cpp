@@ -188,7 +188,7 @@ bool MeshManager::displace_subpatch(Device *device, DeviceScene *dscene, Scene *
 	if(mesh->displacement_method == Mesh::DISPLACE_BUMP)
 		return false;
 
-	Shader *shader = scene->shaders[mesh->patches[subpatch->patch].shader];
+	Shader *shader = scene->shaders[mesh->patches[subpatch->patch & 0x7fffffff].shader];
 
 	if(!shader->has_displacement)
 		return false;

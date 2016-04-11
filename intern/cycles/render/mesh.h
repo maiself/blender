@@ -77,9 +77,9 @@ public:
 		int edge_factors[4];
 		float2 uv[4];
 		BoundBox bounds;
-		int cached_num_triangles, cached_tessellated_size;
+		int cached_num_triangles, cached_bvh_size;
 
-		SubPatch() : bounds(BoundBox::empty), cached_num_triangles(-1), cached_tessellated_size(-1) {}
+		SubPatch() : bounds(BoundBox::empty), cached_num_triangles(-1), cached_bvh_size(-1) {}
 
 		bool is_quad() const { return edge_factors[3] != -1; }
 
