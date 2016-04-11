@@ -107,10 +107,12 @@ ccl_device_noinline void shader_setup_from_ray(KernelGlobals *kg,
 		/* motion triangle */
 		motion_triangle_shader_setup(kg, sd, isect, ray, false);
 	}
+#ifdef __MICRODISPLACEMENT__
 	else if(ccl_fetch(sd, type) & PRIMITIVE_CACHE_TRIANGLE) {
 		/* triangle from geometry cache*/
 		cache_triangle_shader_setup(kg, sd, isect, ray, false);
 	}
+#endif /* __MICRODISPLACEMENT__ */
 
 	ccl_fetch(sd, I) = -ray->D;
 
@@ -185,9 +187,11 @@ ccl_device_inline void shader_setup_from_subsurface(KernelGlobals *kg, ShaderDat
 		triangle_dPdudv(kg, sd->prim, &sd->dPdu, &sd->dPdv);
 #  endif
 	}
+#ifdef __MICRODISPLACEMENT__
 	else if(sd->type == PRIMITIVE_CACHE_TRIANGLE) {
 		cache_triangle_shader_setup(kg, sd, isect, ray, true);
 	}
+#endif /* __MICRODISPLACEMENT__ */
 	else {
 		/* motion triangle */
 		motion_triangle_shader_setup(kg, sd, isect, ray, true);
@@ -311,6 +315,7 @@ ccl_device void shader_setup_from_sample(KernelGlobals *kg,
 #  endif
 #endif
 	}
+#ifdef __MICRODISPLACEMENT__
 	else if(ccl_fetch(sd, type) & PRIMITIVE_CACHE_TRIANGLE) {
 		CacheTriangle tri;
 
@@ -333,6 +338,7 @@ ccl_device void shader_setup_from_sample(KernelGlobals *kg,
 		ccl_fetch(sd, dPdv) = tri.verts[2] - tri.verts[0];
 #endif
 	}
+#endif /* __MICRODISPLACEMENT__ */
 	else {
 #ifdef __DPDU__
 		ccl_fetch(sd, dPdu) = make_float3(0.0f, 0.0f, 0.0f);
@@ -1098,8 +1104,10 @@ ccl_device bool shader_transparent_shadow(KernelGlobals *kg, Intersection *isect
 
 	if(kernel_tex_fetch(__prim_type, isect->prim) & PRIMITIVE_ALL_TRIANGLE)
 		shader = kernel_tex_fetch(__tri_shader, prim);
+#ifdef __MICRODISPLACEMENT__
 	else if(isect->type & PRIMITIVE_CACHE_TRIANGLE)
 		shader = isect->cache_triangle.shader;
+#endif /* __MICRODISPLACEMENT__ */
 #ifdef __HAIR__
 	else {
 		float4 str = kernel_tex_fetch(__curves, prim);

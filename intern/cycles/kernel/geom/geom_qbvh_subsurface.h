@@ -263,6 +263,7 @@ ccl_device void BVH_FUNCTION_FULL_NAME(QBVH)(KernelGlobals *kg,
 						break;
 					}
 #endif
+#ifdef __MICRODISPLACEMENT__
 					case PRIMITIVE_SUBPATCH: {
 						/* Intersect ray against primitive, */
 						for(; primAddr < primAddr2; primAddr++) {
@@ -280,6 +281,7 @@ ccl_device void BVH_FUNCTION_FULL_NAME(QBVH)(KernelGlobals *kg,
 						}
 						break;
 					}
+#endif /* __MICRODISPLACEMENT__ */
 					default:
 						break;
 				}
