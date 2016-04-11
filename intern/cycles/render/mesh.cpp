@@ -1438,6 +1438,8 @@ void MeshManager::device_update(Device *device, DeviceScene *dscene, Scene *scen
 			progress.set_status("Updating Mesh", msg);
 
 			for(int i = 0; i < mesh->subpatches.size(); i++) {
+				if(progress.get_cancel()) return;
+
 				Mesh::SubPatch* subpatch = &mesh->subpatches[i];
 
 				// calculate subpatch size
