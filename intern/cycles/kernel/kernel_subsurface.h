@@ -319,6 +319,7 @@ ccl_device int subsurface_scatter_multi_intersect(
 			                                          verts);
 		}
 #endif  /* __OBJECT_MOTION__ */
+#ifdef __MICRODISPLACEMENT__
 		else if(ss_isect->hits[hit].type & PRIMITIVE_CACHE_TRIANGLE) {
 			hit_P = cache_triangle_refine_subsurface(kg,
 			                                   sd,
@@ -326,6 +327,7 @@ ccl_device int subsurface_scatter_multi_intersect(
 			                                   &ss_isect->hits[hit],
 			                                   ray);
 		}
+#endif /* __MICRODISPLACEMENT__ */
 
 		float3 hit_Ng = ss_isect->Ng[hit];
 		if(ss_isect->hits[hit].object != OBJECT_NONE) {

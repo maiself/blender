@@ -260,6 +260,7 @@ ccl_device bool BVH_FUNCTION_FULL_NAME(QBVH)(KernelGlobals *kg,
 								break;
 							}
 #endif
+#ifdef __MICRODISPLACEMENT__
 							case PRIMITIVE_SUBPATCH: {
 								hit = subpatch_intersect_shadow(kg, &isect_precalc, &isect_array, max_hits, num_hits, isect_t, P, dir, object, primAddr);
 								/* shadow ray early termination */
@@ -268,6 +269,7 @@ ccl_device bool BVH_FUNCTION_FULL_NAME(QBVH)(KernelGlobals *kg,
 								}
 								break;
 							}
+#endif /* __MICRODISPLACEMENT__ */
 							default: {
 								hit = false;
 								break;

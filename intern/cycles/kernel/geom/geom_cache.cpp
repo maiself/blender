@@ -32,6 +32,12 @@
 
 #include "geom/geom.h"
 
+#ifndef __MICRODISPLACEMENT__
+#include "geom_cache.h"
+#include "geom_cache_triangle.h"
+#include "geom_subpatch.h"
+#endif
+
 #include "kernel_accumulate.h"
 #include "kernel_shader.h"
 
@@ -315,5 +321,3 @@ void geom_cache_sample_subpatch_vert_displacement(KernelGlobals *kg, int object,
 }
 
 CCL_NAMESPACE_END
-
-

@@ -56,10 +56,12 @@ ccl_device float wireframe(KernelGlobals *kg,
 			triangle_vertices(kg, ccl_fetch(sd, prim), Co);
 		else if(ccl_fetch(sd, type) & PRIMITIVE_MOTION_TRIANGLE)
 			motion_triangle_vertices(kg, ccl_fetch(sd, object), ccl_fetch(sd, prim), ccl_fetch(sd, time), Co);
+#ifdef __MICRODISPLACEMENT__
 		else {
 			for(int i = 0; i < 3; i++)
 				Co[i] = sd->cache_triangle.verts[i];
 		}
+#endif /* __MICRODISPLACEMENT__ */
 
 		if(!(ccl_fetch(sd, flag) & SD_TRANSFORM_APPLIED)) {
 			object_position_transform(kg, sd, &Co[0]);

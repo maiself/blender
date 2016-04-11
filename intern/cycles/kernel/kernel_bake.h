@@ -502,7 +502,15 @@ ccl_device void kernel_shader_evaluate(KernelGlobals *kg,
 		/* setup shader data */
 		int object = in.x;
 		int prim = in.y;
-		if(prim >= 0) {
+#ifdef __MICRODISPLACEMENT__
+		if(prim < 0) {
+			prim = -prim-1;
+
+			geom_cache_sample_subpatch_vert_displacement(kg, object, prim, in.z, &out);
+		}
+		else
+#endif /* __MICRODISPLACEMENT__ */
+		{
 			float u = __uint_as_float(in.z);
 			float v = __uint_as_float(in.w);
 
@@ -512,11 +520,6 @@ ccl_device void kernel_shader_evaluate(KernelGlobals *kg,
 			float3 P = sd.P;
 			shader_eval_displacement(kg, &sd, &state, SHADER_CONTEXT_MAIN);
 			out = sd.P - P;
-		}
-		else {
-			prim = -prim-1;
-
-			geom_cache_sample_subpatch_vert_displacement(kg, object, prim, in.z, &out);
 		}
 	}
 	else { // SHADER_EVAL_BACKGROUND

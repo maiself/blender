@@ -248,6 +248,7 @@ ccl_device bool BVH_FUNCTION_FULL_NAME(QBVH)(KernelGlobals *kg,
 							break;
 						}
 #endif
+#ifdef __MICRODISPLACEMENT__
 						case PRIMITIVE_SUBPATCH: {
 							for(; primAddr < primAddr2; primAddr++) {
 								kernel_assert(kernel_tex_fetch(__prim_type, primAddr) == type);
@@ -262,6 +263,7 @@ ccl_device bool BVH_FUNCTION_FULL_NAME(QBVH)(KernelGlobals *kg,
 							}
 							break;
 						}
+#endif /* __MICRODISPLACEMENT__ */
 					}
 				}
 #if BVH_FEATURE(BVH_INSTANCING)

@@ -334,6 +334,7 @@ ccl_device bool BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
 							break;
 						}
 #endif  /* BVH_FEATURE(BVH_HAIR) */
+#ifdef __MICRODISPLACEMENT__
 						case PRIMITIVE_SUBPATCH: {
 							for(; primAddr < primAddr2; primAddr++) {
 #if defined(__KERNEL_DEBUG__)
@@ -354,6 +355,7 @@ ccl_device bool BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
 							}
 							break;
 						}
+#endif /* __MICRODISPLACEMENT__ */
 					}
 				}
 #if BVH_FEATURE(BVH_INSTANCING)

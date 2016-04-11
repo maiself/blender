@@ -75,6 +75,7 @@ CCL_NAMESPACE_BEGIN
 #  define __VOLUME_SCATTER__
 #  define __SHADOW_RECORD_ALL__
 #  define __VOLUME_RECORD_ALL__
+#  define __MICRODISPLACEMENT__
 #endif  /* __KERNEL_CPU__ */
 
 #ifdef __KERNEL_CUDA__
