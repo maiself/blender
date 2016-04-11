@@ -1455,7 +1455,7 @@ void MeshManager::device_update(Device *device, DeviceScene *dscene, Scene *scen
 				mesh->dice_subpatch(diced, i);
 
 				// displace
-				Shader *shader = scene->shaders[mesh->patches[subpatch->patch].shader];
+				Shader *shader = scene->shaders[mesh->patches[subpatch->patch & 0x7fffffff].shader];
 				if(mesh->displacement_method != Mesh::DISPLACE_BUMP && shader->has_displacement)
 					displace_subpatch(device, dscene, scene, mesh, progress, diced, i);
 

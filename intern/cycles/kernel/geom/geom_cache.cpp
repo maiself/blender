@@ -131,9 +131,9 @@ void geom_cache_set_max_size(GeomCache * geom_cache, uint max_size) {
 	lru->set_max_size(max_size);
 }
 
-static void geom_cache_get_tessellated_subpatch_size(GeomCache* geom_cache, int object, int prim, uint* num_verts, uint* num_tris, int* total_size) {
+static void geom_cache_get_tessellated_subpatch_size(GeomCache* geom_cache, int object, int prim, uint* num_verts, uint* num_tris, int* cached_bvh_size) {
 	Mesh* mesh = geom_cache->scene->objects[object]->mesh;
-	mesh->diced_subpatch_size(prim, num_verts, num_tris, total_size);
+	mesh->diced_subpatch_size(prim, num_verts, num_tris, cached_bvh_size);
 }
 
 static void geom_cache_dice_subpatch(GeomCache* geom_cache, TessellatedSubPatch* subpatch, int object, int prim) {
@@ -143,7 +143,7 @@ static void geom_cache_dice_subpatch(GeomCache* geom_cache, TessellatedSubPatch*
 
 static void geom_cache_update_subpatch_size(GeomCache* geom_cache, int object, int prim, int size) {
 	Mesh* mesh = geom_cache->scene->objects[object]->mesh;
-	mesh->subpatches[prim].cached_tessellated_size = size;
+	mesh->subpatches[prim].cached_bvh_size = size;
 }
 
 static void _geom_cache_sample_subpatch_vert(TessellatedSubPatch *subpatch, int vert, float3 *P, float3 *N, float *u, float *v, int *shader)
@@ -190,13 +190,11 @@ TessellatedSubPatch* geom_cache_get_subpatch(KernelGlobals *kg, int object, int 
 
 		// get patch size
 		uint num_verts, num_tris, bvh_size = 0;
-		int total_size = -1;
-		geom_cache_get_tessellated_subpatch_size(geom_cache, object, prim, &num_verts, &num_tris, &total_size);
-		bvh_size = num_tris*2*4 + 4;
+		int cached_bvh_size = -1;
+		geom_cache_get_tessellated_subpatch_size(geom_cache, object, prim, &num_verts, &num_tris, &cached_bvh_size);
+		bvh_size = (cached_bvh_size >= 0)? cached_bvh_size: (num_tris*2*4 + 4);
 
 		size_t size = sizeof(SubPatchWraper) + sizeof(float4)*(num_verts*2 + num_tris + bvh_size);
-		if(total_size >= 0)
-			size = total_size;
 
 		// alloc
 		SubPatchWraper* wraper = (SubPatchWraper*)operator new (size);
@@ -214,6 +212,8 @@ TessellatedSubPatch* geom_cache_get_subpatch(KernelGlobals *kg, int object, int 
 		subpatch->vert_offset = 0;
 		subpatch->tri_offset = num_verts*2;
 		subpatch->bvh_offset = subpatch->tri_offset + num_tris;
+
+		assert((subpatch->bvh_offset + bvh_size)*sizeof(float4) <= (size - sizeof(SubPatchWraper)));
 
 		// dice
 		geom_cache_dice_subpatch(geom_cache, subpatch, object, prim);
@@ -281,9 +281,8 @@ TessellatedSubPatch* geom_cache_get_subpatch(KernelGlobals *kg, int object, int 
 			bvh_size = subpatch_build_bvh(subpatch, bvh_size);
 
 			// update size for next time
-			if(total_size < 0) {
-				size = sizeof(TessellatedSubPatch) + sizeof(float4)*(num_verts*2 + subpatch->num_triangles + bvh_size);
-				geom_cache_update_subpatch_size(geom_cache, object, prim, size);
+			if(cached_bvh_size < 0) {
+				geom_cache_update_subpatch_size(geom_cache, object, prim, bvh_size);
 			}
 		}
 

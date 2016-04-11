@@ -305,8 +305,8 @@ void Mesh::diced_subpatch_size(int subpatch_id, uint* num_verts, uint* num_tris,
 		*num_tris = subpatch.cached_num_triangles;
 	}
 
-	if(total_size && subpatch.cached_tessellated_size >= 0) {
-		*total_size = subpatch.cached_tessellated_size;
+	if(total_size && subpatch.cached_bvh_size >= 0) {
+		*total_size = subpatch.cached_bvh_size;
 	}
 }
 
