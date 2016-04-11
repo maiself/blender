@@ -14,6 +14,13 @@
  * limitations under the License.
  */
 
+/* TODO: Move the OpenSubdiv includes to a separate header. */
+#ifdef _MSC_VER
+#  include <iso646.h>
+#  define _USE_MATH_DEFINES
+#  include <math.h>
+#endif
+
 #include <opensubdiv/far/topologyDescriptor.h>
 #include <opensubdiv/far/primvarRefiner.h>
 #include <opensubdiv/far/patchTableFactory.h>
