@@ -89,7 +89,7 @@ void Mesh::update_osd()
 {
 	assert(!osd_data);
 
-	if(subdivision_type != Mesh::SUBDIVISION_CATMALL_CLARK)
+	if(subdivision_type != Mesh::SUBDIVISION_CATMULL_CLARK)
 		return;
 
 	osd_data = new MeshOsdData;
@@ -331,7 +331,7 @@ void Mesh::dice_subpatch(TessellatedSubPatch* diced, int subpatch_id)
 	LinearTrianglePatch tri_patch;
 	ccl::Patch* subd_patch;
 
-	if(subdivision_type == SUBDIVISION_CATMALL_CLARK) {
+	if(subdivision_type == SUBDIVISION_CATMULL_CLARK) {
 		osd_patch.mesh = this;
 		osd_patch.patch = subpatches[subpatch_id].patch;
 
@@ -430,7 +430,7 @@ void Mesh::split_patches(DiagSplit *split)
 	float3 *vN = attr_vN->data_float3();
 
 	for(int p = 0; p < patches.size(); p++) {
-		if(subdivision_type == SUBDIVISION_CATMALL_CLARK) {
+		if(subdivision_type == SUBDIVISION_CATMULL_CLARK) {
 			OsdPatch patch;
 			patch.mesh = this;
 			patch.patch = p;

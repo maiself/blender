@@ -112,7 +112,7 @@ public:
 	enum SubdivisionType {
 		SUBDIVISION_NONE,
 		SUBDIVISION_LINEAR,
-		SUBDIVISION_CATMALL_CLARK,
+		SUBDIVISION_CATMULL_CLARK,
 	};
 
 	SubdivisionType subdivision_type;
