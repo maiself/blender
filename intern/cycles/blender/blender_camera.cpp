@@ -363,8 +363,8 @@ static void blender_camera_sync(Camera *cam, BlenderCamera *bcam, int width, int
 	cam->width = bcam->full_width;
 	cam->height = bcam->full_height;
 
-	cam->widthorig = width;
-	cam->heightorig = height;
+	cam->full_width = width;
+	cam->full_height = height;
 
 	/* panorama sensor */
 	if(bcam->type == CAMERA_PANORAMA && bcam->panorama_type == PANORAMA_FISHEYE_EQUISOLID) {

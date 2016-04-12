@@ -49,7 +49,7 @@ enum_displacement_methods = (
 enum_subdivision_types = (
     ('NONE', "None", "No subdivision"),
     ('LINEAR', "Linear", "Use linear subdivision"),
-    ('CATMALL_CLARK', "Catmull–Clark", "Use Catmull-Clark subdivision"),
+    ('CATMULL_CLARK', "Catmull–Clark", "Use Catmull-Clark subdivision"),
     )
 
 enum_bvh_types = (
@@ -957,7 +957,7 @@ class CyclesMeshSettings(bpy.types.PropertyGroup):
                 )
         cls.dicing_rate = FloatProperty(
                 name="Dicing Rate",
-                description="Width of a micropolygon in pixels",
+                description="Size of a micropolygon in pixels",
                 min=0.1, max=1000.0,
                 default=1.0,
                 )

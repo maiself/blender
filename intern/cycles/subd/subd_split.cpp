@@ -49,7 +49,7 @@ void DiagSplit::dispatch(TriangleDice::SubPatch& sub, TriangleDice::EdgeFactors&
 	edgefactors_triangle.push_back(ef);
 }
 
-float3 DiagSplit::project(Patch *patch, float2 uv)
+float3 DiagSplit::to_world(Patch *patch, float2 uv)
 {
 	float3 P;
 
@@ -69,7 +69,7 @@ int DiagSplit::T(Patch *patch, float2 Pstart, float2 Pend)
 	for(int i = 0; i < params.test_steps; i++) {
 		float t = i/(float)(params.test_steps-1);
 
-		float3 P = project(patch, Pstart + t*(Pend - Pstart));
+		float3 P = to_world(patch, Pstart + t*(Pend - Pstart));
 
 		if(i > 0) {
 			float L;
@@ -80,7 +80,7 @@ int DiagSplit::T(Patch *patch, float2 Pstart, float2 Pend)
 			else {
 				Camera* cam = params.camera;
 
-				float pixel_width = cam->pixel_width_at_point((P + Plast) * 0.5f);
+				float pixel_width = cam->world_to_raster_size((P + Plast) * 0.5f);
 				L = len(P - Plast) / pixel_width;
 			}
 
@@ -171,10 +171,13 @@ static void limit_edge_factors(const QuadDice::SubPatch& sub, QuadDice::EdgeFact
 void DiagSplit::split(TriangleDice::SubPatch& sub, TriangleDice::EdgeFactors& ef, int depth)
 {
 	if(depth > 32) {
-		fprintf(stderr, "overflow while splitting patches\n");
-#ifndef NDEBUG
-		abort();
-#endif
+		/* We should never get here, but just in case end recursion safely. */
+		ef.tu = 1;
+		ef.tv = 1;
+		ef.tw = 1;
+
+		dispatch(sub, ef);
+		return;
 	}
 
 	assert(ef.tu == T(sub.patch, sub.Pv, sub.Pw));
@@ -246,10 +249,14 @@ void DiagSplit::split(TriangleDice::SubPatch& sub, TriangleDice::EdgeFactors& ef
 void DiagSplit::split(QuadDice::SubPatch& sub, QuadDice::EdgeFactors& ef, int depth)
 {
 	if(depth > 32) {
-		fprintf(stderr, "overflow while splitting patches\n");
-#ifndef NDEBUG
-		abort();
-#endif
+		/* We should never get here, but just in case end recursion safely. */
+		ef.tu0 = 1;
+		ef.tu1 = 1;
+		ef.tv0 = 1;
+		ef.tv1 = 1;
+
+		dispatch(sub, ef);
+		return;
 	}
 
 	bool split_u = (ef.tu0 == DSPLIT_NON_UNIFORM || ef.tu1 == DSPLIT_NON_UNIFORM);

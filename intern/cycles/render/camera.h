@@ -118,9 +118,10 @@ public:
 
 	/* screen */
 	int width, height;
-	int widthorig, heightorig; /* width and height change during preview, so we need these for calculating dice rates */
 	int resolution;
 	BoundBox2D viewplane;
+	/* width and height change during preview, so we need these for calculating dice rates. */
+	int full_width, full_height;
 
 	/* border */
 	BoundBox2D border;
@@ -152,8 +153,8 @@ public:
 	float3 dx;
 	float3 dy;
 
-	float3 dxorig;
-	float3 dyorig;
+	float3 full_dx;
+	float3 full_dy;
 
 	/* update */
 	bool need_update;
@@ -180,8 +181,8 @@ public:
 	/* Public utility functions. */
 	BoundBox viewplane_bounds_get();
 
-	/* calculates the width of a pixel at point in world space */
-	float pixel_width_at_point(float3 P);
+	/* Calculates the width of a pixel at point in world space. */
+	float world_to_raster_size(float3 P);
 
 private:
 	/* Private utility functions. */

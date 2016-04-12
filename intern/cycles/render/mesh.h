@@ -28,8 +28,6 @@
 #include "util_types.h"
 #include "util_vector.h"
 
-#include "../subd/subd_split.h"
-
 CCL_NAMESPACE_BEGIN
 
 class BVH;
@@ -40,6 +38,7 @@ class Progress;
 class Scene;
 class SceneParams;
 class AttributeRequest;
+class DiagSplit;
 class MeshOsdData;
 
 /* Mesh */
