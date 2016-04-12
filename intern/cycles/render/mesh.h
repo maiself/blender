@@ -38,6 +38,8 @@ class Progress;
 class Scene;
 class SceneParams;
 class AttributeRequest;
+class DiagSplit;
+class MeshOsdData;
 
 /* Mesh */
 
@@ -61,6 +63,43 @@ public:
 		void bounds_grow(const int k, const float4 *curve_keys, BoundBox& bounds) const;
 	};
 
+	/* Mesh Patch */
+	struct Patch {
+		int v[4]; /* v[3] is -1 if triangle patch */
+		uint shader;
+		bool smooth;
+
+		bool is_quad() const { return v[3] != -1; }
+	};
+
+	struct SubPatch {
+		int patch;
+		int edge_factors[4];
+		float2 uv[4];
+		BoundBox bounds;
+		int cached_num_triangles, cached_bvh_size;
+
+		SubPatch() : bounds(BoundBox::empty), cached_num_triangles(-1), cached_bvh_size(-1) {}
+
+		bool is_quad() const { return edge_factors[3] != -1; }
+
+		void bounds_grow(BoundBox& bounds) const;
+
+		bool operator == (const SubPatch& other) const
+		{
+			if(patch != other.patch)
+				return false;
+
+			for(int i = 0; i < 4; i++) {
+				if((edge_factors[i] != other.edge_factors[i]) || (uv[i] != other.uv[i]))
+					return false;
+			}
+
+			return true;
+		}
+		bool operator != (const SubPatch& other) const { return !(*this == other); }
+	};
+
 	/* Displacement */
 	enum DisplacementMethod {
 		DISPLACE_BUMP = 0,
@@ -69,6 +108,14 @@ public:
 
 		DISPLACE_NUM_METHODS,
 	};
+
+	enum SubdivisionType {
+		SUBDIVISION_NONE,
+		SUBDIVISION_LINEAR,
+		SUBDIVISION_CATMULL_CLARK,
+	};
+
+	SubdivisionType subdivision_type;
 
 	ustring name;
 
@@ -92,9 +139,14 @@ public:
 	vector<float4> curve_keys; /* co + radius */
 	vector<Curve> curves;
 
+	vector<Patch> patches;
+	vector<SubPatch> subpatches;
+	MeshOsdData* osd_data;
+
 	vector<uint> used_shaders;
 	AttributeSet attributes;
 	AttributeSet curve_attributes;
+	AttributeSet subd_attributes;
 
 	BoundBox bounds;
 	bool transform_applied;
@@ -104,6 +156,8 @@ public:
 
 	uint motion_steps;
 	bool use_motion_blur;
+
+	float displacement_scale;
 
 	/* Update Flags */
 	bool need_update;
@@ -117,16 +171,19 @@ public:
 	size_t curve_offset;
 	size_t curvekey_offset;
 
+	size_t patch_offset;
+
 	/* Functions */
 	Mesh();
 	~Mesh();
 
-	void reserve(int numverts, int numfaces, int numcurves, int numcurvekeys);
+	void reserve(int numverts, int numfaces, int numcurves, int numcurvekeys, int numpatches);
 	void clear();
 	void set_triangle(int i, int v0, int v1, int v2, int shader, bool smooth);
 	void add_triangle(int v0, int v1, int v2, int shader, bool smooth);
 	void add_curve_key(float3 loc, float radius);
 	void add_curve(int first_key, int num_keys, int shader);
+	void set_patch(int i, int v0, int v1, int v2, int v3, int shader, bool smooth);
 	int split_vertex(int vertex);
 
 	void compute_bounds();
@@ -157,6 +214,13 @@ public:
 
 	/* Check if the mesh should be treated as instanced. */
 	bool is_instanced() const;
+
+	void update_osd();
+	void free_osd_data();
+
+	void split_patches(DiagSplit *split);
+	void diced_subpatch_size(int subpatch_id, uint* num_verts, uint* num_tris, int* total_size);
+	void dice_subpatch(TessellatedSubPatch* diced, int subpatch_id);
 };
 
 /* Mesh Manager */
@@ -167,11 +231,14 @@ public:
 
 	bool need_update;
 	bool need_flags_update;
+	bool need_clear_geom_cache;
 
 	MeshManager();
 	~MeshManager();
 
 	bool displace(Device *device, DeviceScene *dscene, Scene *scene, Mesh *mesh, Progress& progress);
+	bool displace_subpatch(Device *device, DeviceScene *dscene, Scene *scene, Mesh *mesh, Progress& progress,
+		TessellatedSubPatch* subpatch, int subpatch_id);
 
 	/* attributes */
 	void update_osl_attributes(Device *device, Scene *scene, vector<AttributeRequestSet>& mesh_attributes);

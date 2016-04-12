@@ -22,7 +22,6 @@
  * versions for each case without new features slowing things down.
  *
  * BVH_INSTANCING: object instancing
- * BVH_HAIR: hair curve rendering
  * BVH_MOTION: motion blur rendering
  *
  */
@@ -249,9 +248,8 @@ ccl_device bool BVH_FUNCTION_FULL_NAME(QBVH)(KernelGlobals *kg,
 							break;
 						}
 #endif
-#if BVH_FEATURE(BVH_HAIR)
-						case PRIMITIVE_CURVE:
-						case PRIMITIVE_MOTION_CURVE: {
+#ifdef __MICRODISPLACEMENT__
+						case PRIMITIVE_SUBPATCH: {
 							for(; primAddr < primAddr2; primAddr++) {
 								kernel_assert(kernel_tex_fetch(__prim_type, primAddr) == type);
 								/* Only primitives from volume object. */
@@ -261,14 +259,11 @@ ccl_device bool BVH_FUNCTION_FULL_NAME(QBVH)(KernelGlobals *kg,
 									continue;
 								}
 								/* Intersect ray against primitive. */
-								if(kernel_data.curve.curveflags & CURVE_KN_INTERPOLATE)
-									bvh_cardinal_curve_intersect(kg, isect, P, dir, visibility, object, primAddr, ray->time, type, NULL, 0, 0);
-								else
-									bvh_curve_intersect(kg, isect, P, dir, visibility, object, primAddr, ray->time, type, NULL, 0, 0);
+								subpatch_intersect(kg, &isect_precalc, isect, P, dir, visibility, object, primAddr);
 							}
 							break;
 						}
-#endif
+#endif /* __MICRODISPLACEMENT__ */
 					}
 				}
 #if BVH_FEATURE(BVH_INSTANCING)

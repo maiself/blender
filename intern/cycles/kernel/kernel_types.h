@@ -34,7 +34,7 @@
 CCL_NAMESPACE_BEGIN
 
 /* constants */
-#define OBJECT_SIZE 		11
+#define OBJECT_SIZE 		12
 #define OBJECT_VECTOR_SIZE	6
 #define LIGHT_SIZE			5
 #define FILTER_TABLE_SIZE	1024
@@ -75,6 +75,7 @@ CCL_NAMESPACE_BEGIN
 #  define __VOLUME_SCATTER__
 #  define __SHADOW_RECORD_ALL__
 #  define __VOLUME_RECORD_ALL__
+#  define __MICRODISPLACEMENT__
 #endif  /* __KERNEL_CPU__ */
 
 #ifdef __KERNEL_CUDA__
@@ -534,6 +535,51 @@ typedef struct Ray {
 #endif
 } Ray;
 
+/* Tessellated geometry from geometry cache */
+
+typedef struct TessellatedSubPatch {
+	int object, prim;
+
+	// index of unsplit patch
+	uint patch;
+
+	// vertex indices of unsplit patch
+	int v[4];
+	// uv of corners of subpatch within patch
+	float2 uv[4];
+
+	// shader and smooth for patch
+	uint shader;
+	bool smooth;
+
+	int num_verts;
+	int num_triangles;
+
+	// offsets into data
+	int vert_offset;
+	int tri_offset;
+	int bvh_offset;
+
+	float4 data[];
+} TessellatedSubPatch;
+
+typedef struct CacheTriangle {
+	float3 verts[3];
+	float3 normals[3];
+	float2 uv[3]; // patch parametric
+	int v[4]; // patch vert indices
+	uint patch; // index of unsplit patch
+	uint shader;
+} CacheTriangle;
+
+typedef enum ObjectDisplacementMethod {
+	OBJECT_DISPLACEMENT_BUMP = 0,
+	OBJECT_DISPLACEMENT_TRUE,
+	OBJECT_DISPLACEMENT_BOTH,
+
+	OBJECT_DISPLACE_NUM_METHODS
+} ObjectDisplacementMethod;
+
 /* Intersection */
 
 typedef ccl_addr_space struct Intersection {
@@ -541,6 +587,8 @@ typedef ccl_addr_space struct Intersection {
 	int prim;
 	int object;
 	int type;
+
+	CacheTriangle cache_triangle;
 
 #ifdef __KERNEL_DEBUG__
 	int num_traversal_steps;
@@ -556,16 +604,18 @@ typedef enum PrimitiveType {
 	PRIMITIVE_MOTION_TRIANGLE = 2,
 	PRIMITIVE_CURVE = 4,
 	PRIMITIVE_MOTION_CURVE = 8,
+	PRIMITIVE_SUBPATCH = 16,
+	PRIMITIVE_CACHE_TRIANGLE = 32,
 
 	PRIMITIVE_ALL_TRIANGLE = (PRIMITIVE_TRIANGLE|PRIMITIVE_MOTION_TRIANGLE),
 	PRIMITIVE_ALL_CURVE = (PRIMITIVE_CURVE|PRIMITIVE_MOTION_CURVE),
 	PRIMITIVE_ALL_MOTION = (PRIMITIVE_MOTION_TRIANGLE|PRIMITIVE_MOTION_CURVE),
-	PRIMITIVE_ALL = (PRIMITIVE_ALL_TRIANGLE|PRIMITIVE_ALL_CURVE),
+	PRIMITIVE_ALL = (PRIMITIVE_ALL_TRIANGLE|PRIMITIVE_ALL_CURVE|PRIMITIVE_SUBPATCH|PRIMITIVE_CACHE_TRIANGLE),
 
 	/* Total number of different primitives.
 	 * NOTE: This is an actual value, not a bitflag.
 	 */
-	PRIMITIVE_NUM_TOTAL = 4,
+	PRIMITIVE_NUM_TOTAL = 6,
 } PrimitiveType;
 
 #define PRIMITIVE_PACK_SEGMENT(type, segment) ((segment << 16) | type)
@@ -573,8 +623,13 @@ typedef enum PrimitiveType {
 
 /* Attributes */
 
-#define ATTR_PRIM_TYPES		2
-#define ATTR_PRIM_CURVE		1
+typedef enum AttributePrimitive {
+	ATTR_PRIM_TRIANGLE = 0,
+	ATTR_PRIM_CURVE,
+	ATTR_PRIM_SUBD,
+
+	ATTR_PRIM_TYPES
+} AttributePrimitive;
 
 typedef enum AttributeElement {
 	ATTR_ELEMENT_NONE,
@@ -720,10 +775,11 @@ enum ShaderDataFlag {
 	SD_OBJECT_HAS_VOLUME        = (1 << 24),  /* object has a volume shader */
 	SD_OBJECT_INTERSECTS_VOLUME = (1 << 25),  /* object intersects AABB of an object with volume shader */
 	SD_OBJECT_HAS_VERTEX_MOTION = (1 << 26),  /* has position for motion vertices */
+	SD_OBJECT_HAS_DISPLACEMENT  = (1 << 27),  /* mesh has displacement */
 
 	SD_OBJECT_FLAGS = (SD_HOLDOUT_MASK|SD_OBJECT_MOTION|SD_TRANSFORM_APPLIED|
 	                   SD_NEGATIVE_SCALE_APPLIED|SD_OBJECT_HAS_VOLUME|
-	                   SD_OBJECT_INTERSECTS_VOLUME)
+	                   SD_OBJECT_INTERSECTS_VOLUME|SD_OBJECT_HAS_DISPLACEMENT)
 };
 
 struct KernelGlobals;
@@ -816,6 +872,9 @@ typedef ccl_addr_space struct ShaderData {
 	struct KernelGlobals * osl_globals;
 	struct PathState *osl_path_state;
 #endif
+
+	/* triangle from geometry cache, stored here since cache entry may be invalidated before use */
+	CacheTriangle cache_triangle;
 } ShaderData;
 
 /* Path State */
@@ -829,7 +888,7 @@ typedef struct VolumeStack {
 
 typedef struct PathState {
 	/* see enum PathRayFlag */
-	int flag;          
+	int flag;
 
 	/* random number generator state */
 	int rng_offset;    		/* dimension offset */
@@ -1178,34 +1237,50 @@ typedef ccl_addr_space struct DebugData {
 
 /* Queue names */
 enum QueueNumber {
-	QUEUE_ACTIVE_AND_REGENERATED_RAYS = 0,     /* All active rays and regenerated rays are enqueued here. */
-	QUEUE_HITBG_BUFF_UPDATE_TOREGEN_RAYS = 1,  /* All
-	                                            * 1. Background-hit rays,
-	                                            * 2. Rays that has exited path-iteration but needs to update output buffer
-	                                            * 3. Rays to be regenerated
-	                                            * are enqueued here.
-	                                            */
-	QUEUE_SHADOW_RAY_CAST_AO_RAYS = 2,         /* All rays for which a shadow ray should be cast to determine radiance
-	                                            * contribution for AO are enqueued here.
-	                                            */
-	QUEUE_SHADOW_RAY_CAST_DL_RAYS = 3,         /* All rays for which a shadow ray should be cast to determine radiance
-	                                            * contributing for direct lighting are enqueued here.
-	                                            */
+	/* All active rays and regenerated rays are enqueued here. */
+	QUEUE_ACTIVE_AND_REGENERATED_RAYS = 0,
+
+	/* All
+	 * 1. Background-hit rays,
+	 * 2. Rays that has exited path-iteration but needs to update output buffer
+	 * 3. Rays to be regenerated
+	 * are enqueued here.
+	 */
+	QUEUE_HITBG_BUFF_UPDATE_TOREGEN_RAYS = 1,
+
+	/* All rays for which a shadow ray should be cast to determine radiance
+	 * contribution for AO are enqueued here.
+	 */
+	QUEUE_SHADOW_RAY_CAST_AO_RAYS = 2,
+
+	/* All rays for which a shadow ray should be cast to determine radiance
+	 * contributing for direct lighting are enqueued here.
+	 */
+	QUEUE_SHADOW_RAY_CAST_DL_RAYS = 3,
 };
 
 /* We use RAY_STATE_MASK to get ray_state (enums 0 to 5) */
 #define RAY_STATE_MASK 0x007
 #define RAY_FLAG_MASK 0x0F8
 enum RayState {
-	RAY_ACTIVE = 0,             // Denotes ray is actively involved in path-iteration
-	RAY_INACTIVE = 1,           // Denotes ray has completed processing all samples and is inactive
-	RAY_UPDATE_BUFFER = 2,      // Denoted ray has exited path-iteration and needs to update output buffer
-	RAY_HIT_BACKGROUND = 3,     // Donotes ray has hit background
-	RAY_TO_REGENERATE = 4,      // Denotes ray has to be regenerated
-	RAY_REGENERATED = 5,        // Denotes ray has been regenerated
-	RAY_SKIP_DL = 6,            // Denotes ray should skip direct lighting
-	RAY_SHADOW_RAY_CAST_AO = 16, // Flag's ray has to execute shadow blocked function in AO part
-	RAY_SHADOW_RAY_CAST_DL = 32 // Flag's ray has to execute shadow blocked function in direct lighting part
+	/* Denotes ray is actively involved in path-iteration. */
+	RAY_ACTIVE = 0,
+	/* Denotes ray has completed processing all samples and is inactive. */
+	RAY_INACTIVE = 1,
+	/* Denoted ray has exited path-iteration and needs to update output buffer. */
+	RAY_UPDATE_BUFFER = 2,
+	/* Donotes ray has hit background */
+	RAY_HIT_BACKGROUND = 3,
+	/* Denotes ray has to be regenerated */
+	RAY_TO_REGENERATE = 4,
+	/* Denotes ray has been regenerated */
+	RAY_REGENERATED = 5,
+	/* Denotes ray should skip direct lighting */
+	RAY_SKIP_DL = 6,
+	/* Flag's ray has to execute shadow blocked function in AO part */
+	RAY_SHADOW_RAY_CAST_AO = 16,
+	/* Flag's ray has to execute shadow blocked function in direct lighting part. */
+	RAY_SHADOW_RAY_CAST_DL = 32,
 };
 
 #define ASSIGN_RAY_STATE(ray_state, ray_index, state) (ray_state[ray_index] = ((ray_state[ray_index] & RAY_FLAG_MASK) | state))

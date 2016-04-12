@@ -44,6 +44,13 @@
 #include "geom_motion_curve.h"
 #include "geom_curve.h"
 #include "geom_volume.h"
+
+#ifdef __MICRODISPLACEMENT__
+#  include "geom_cache.h"
+#  include "geom_cache_triangle.h"
+#  include "geom_subpatch.h"
+#endif /* __MICRODISPLACEMENT__ */
+
 #include "geom_primitive.h"
 #include "geom_bvh.h"
 

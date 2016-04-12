@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2013 Blender Foundation
+ * Copyright 2011-2016 Blender Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,23 @@
  * limitations under the License.
  */
 
-#include "stdosl.h"
+#ifndef __UTIL_BVH_H__
+#define __UTIL_BVH_H__
 
-displacement node_output_displacement(float Displacement = 0.0)
-{
-	float scale = 1.0;
-	getattribute("object:displacement_scale", scale);
-	P += N * Displacement * scale;
-}
+#include "util_math.h"
+
+CCL_NAMESPACE_BEGIN
+
+/* builds a bvh from a triangle soup 
+ * 
+ * size of bvh_data must be at least (sizeof(float4) * num_triangles * 8 + 4) or
+ * actual size of built bvh if known ahead of time
+ *
+ * returns number of float4 used for bvh
+ */
+size_t util_bvh_build(float4* bvh_data, float4* verts, uint4* triangles, uint num_triangles, uint size);
+
+CCL_NAMESPACE_END
+
+#endif /* __UTIL_BVH_H__ */
 

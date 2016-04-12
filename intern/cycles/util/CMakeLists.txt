@@ -2,6 +2,7 @@
 set(INC
 	.
 	../../glew-mx
+	../
 )
 
 set(INC_SYS
@@ -10,6 +11,7 @@ set(INC_SYS
 
 set(SRC
 	util_aligned_malloc.cpp
+	util_bvh.cpp
 	util_debug.cpp
 	util_logging.cpp
 	util_math_cdf.cpp
@@ -49,6 +51,7 @@ set(SRC_HEADERS
 	util_image.h
 	util_list.h
 	util_logging.h
+	util_lru.h
 	util_map.h
 	util_math.h
 	util_math_cdf.h

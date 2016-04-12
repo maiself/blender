@@ -46,6 +46,12 @@ enum_displacement_methods = (
     ('BOTH', "Both", "Combination of displacement and bump mapping"),
     )
 
+enum_subdivision_types = (
+    ('NONE', "None", "No subdivision"),
+    ('LINEAR', "Linear", "Use linear subdivision"),
+    ('CATMULL_CLARK', "Catmull–Clark", "Use Catmull-Clark subdivision"),
+    )
+
 enum_bvh_types = (
     ('DYNAMIC_BVH', "Dynamic BVH", "Objects can be individually updated, at the cost of slower render time"),
     ('STATIC_BVH', "Static BVH", "Any object modification requires a complete BVH rebuild, but renders faster"),
@@ -492,6 +498,12 @@ class CyclesRenderSettings(bpy.types.PropertyGroup):
                             "but time can be saved by manually stopping the render when the noise is low enough)",
                 default=False,
                 )
+        cls.geom_cache_max_size = IntProperty(
+                name="Geometry Cache Size",
+                description="Maximum size of the geometry cache in MB",
+                min=128, max=1024*4,
+                default=256,
+                )
 
         cls.bake_type = EnumProperty(
             name="Bake Type",
@@ -931,16 +943,40 @@ class CyclesMeshSettings(bpy.types.PropertyGroup):
                 items=enum_displacement_methods,
                 default='BUMP',
                 )
-        cls.use_subdivision = BoolProperty(
-                name="Use Subdivision",
-                description="Subdivide mesh for rendering",
-                default=False,
+        cls.displacement_scale = FloatProperty(
+                name="Displacement Scale",
+                description="",
+                min=-1000, max=1000.0,
+                default=1.0,
+                )
+        cls.subdivision_type = EnumProperty(
+                name="Subdivision Type",
+                description="Type of subdivision to use",
+                items=enum_subdivision_types,
+                default='NONE',
                 )
         cls.dicing_rate = FloatProperty(
                 name="Dicing Rate",
-                description="",
-                min=0.001, max=1000.0,
+                description="Size of a micropolygon in pixels",
+                min=0.1, max=1000.0,
                 default=1.0,
+                )
+        cls.preview_dicing_rate = FloatProperty(
+                name="Preview Dicing Rate",
+                description="Width of a micropolygon in pixels during preview render",
+                min=0.1, max=1000.0,
+                default=8.0,
+                )
+        cls.preview_displacement = BoolProperty(
+                name="Preview Displacement",
+                description="Use subdivision in preview render",
+                default=True,
+                )
+        cls.max_subdivision_level = IntProperty(
+                name="Max Subdivision Level",
+                description="",
+                min=0, max=16,
+                default=12,
                 )
 
     @classmethod
