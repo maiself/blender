@@ -38,11 +38,6 @@ ccl_device float primitive_attribute_float(KernelGlobals *kg, const ShaderData *
 		return volume_attribute_float(kg, sd, elem, offset, dx, dy);
 	}
 #endif
-#ifdef __MICRODISPLACEMENT__
-	else if(ccl_fetch(sd, type) & PRIMITIVE_CACHE_TRIANGLE) {
-		return cache_triangle_attribute_float(kg, sd, elem, offset, dx, dy);
-	}
-#endif /* __MICRODISPLACEMENT__ */
 	else {
 		if(dx) *dx = 0.0f;
 		if(dy) *dy = 0.0f;
@@ -65,11 +60,6 @@ ccl_device float3 primitive_attribute_float3(KernelGlobals *kg, const ShaderData
 		return volume_attribute_float3(kg, sd, elem, offset, dx, dy);
 	}
 #endif
-#ifdef __MICRODISPLACEMENT__
-	else if(ccl_fetch(sd, type) & PRIMITIVE_CACHE_TRIANGLE) {
-		return cache_triangle_attribute_float3(kg, sd, elem, offset, dx, dy);
-	}
-#endif /* __MICRODISPLACEMENT__ */
 	else {
 		if(dx) *dx = make_float3(0.0f, 0.0f, 0.0f);
 		if(dy) *dy = make_float3(0.0f, 0.0f, 0.0f);

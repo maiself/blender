@@ -205,7 +205,7 @@ void BVH::pack_instances(size_t nodes_size, size_t leaf_nodes_size)
 		if(pack.prim_index[i] != -1) {
 			if(pack.prim_type[i] & PRIMITIVE_ALL_CURVE)
 				pack.prim_index[i] += objects[pack.prim_object[i]]->mesh->curve_offset;
-			else if(pack.prim_type[i] & PRIMITIVE_ALL_TRIANGLE)
+			else
 				pack.prim_index[i] += objects[pack.prim_object[i]]->mesh->tri_offset;
 		}
 
@@ -311,8 +311,6 @@ void BVH::pack_instances(size_t nodes_size, size_t leaf_nodes_size)
 			for(size_t i = 0; i < bvh_prim_index_size; i++) {
 				if(bvh->pack.prim_type[i] & PRIMITIVE_ALL_CURVE)
 					pack_prim_index[pack_prim_index_offset] = bvh_prim_index[i] + mesh_curve_offset;
-				else if(bvh->pack.prim_type[i] & PRIMITIVE_SUBPATCH)
-					pack_prim_index[pack_prim_index_offset] = bvh_prim_index[i];
 				else
 					pack_prim_index[pack_prim_index_offset] = bvh_prim_index[i] + mesh_tri_offset;
 
@@ -535,12 +533,6 @@ void RegularBVH::refit_node(int idx, bool leaf, BoundBox& bbox, uint& visibility
 								curve.bounds_grow(k, key_steps + i*mesh_size, bbox);
 						}
 					}
-				}
-				else if(pack.prim_type[prim] & PRIMITIVE_SUBPATCH) {
-					/* Subpatches. */
-					const Mesh::SubPatch& subpatch = mesh->subpatches[pidx];
-
-					subpatch.bounds_grow(bbox);
 				}
 				else {
 					/* triangles */
@@ -805,12 +797,6 @@ void QBVH::refit_node(int idx, bool leaf, BoundBox& bbox, uint& visibility)
 								curve.bounds_grow(k, key_steps + i*mesh_size, bbox);
 						}
 					}
-				}
-				else if(pack.prim_type[prim] & PRIMITIVE_SUBPATCH) {
-					/* Subpatches. */
-					const Mesh::SubPatch& subpatch = mesh->subpatches[pidx];
-
-					subpatch.bounds_grow(bbox);
 				}
 				else {
 					/* Triangles. */

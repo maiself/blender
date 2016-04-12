@@ -4358,7 +4358,6 @@ BumpNode::BumpNode()
 : ShaderNode("bump")
 {
 	invert = false;
-	displacement_override = false;
 
 	special_type = SHADER_SPECIAL_TYPE_BUMP;
 
@@ -4397,9 +4396,8 @@ void BumpNode::compile(SVMCompiler& compiler)
 		compiler.stack_assign(normal_in);
 	
 	/* pack all parameters in the node */
-	int flags = (NODE_BUMP_INVERT * invert) | (NODE_BUMP_OVERRIDE * displacement_override);
 	compiler.add_node(NODE_SET_BUMP,
-		compiler.encode_uchar4(normal_in->stack_offset, distance_in->stack_offset, flags),
+		compiler.encode_uchar4(normal_in->stack_offset, distance_in->stack_offset, invert),
 		compiler.encode_uchar4(center_in->stack_offset, dx_in->stack_offset,
 			dy_in->stack_offset, strength_in->stack_offset),
 		normal_out->stack_offset);
@@ -4408,7 +4406,6 @@ void BumpNode::compile(SVMCompiler& compiler)
 void BumpNode::compile(OSLCompiler& compiler)
 {
 	compiler.parameter("invert", invert);
-	compiler.parameter("displacement_scale_override", displacement_override);
 	compiler.add(this, "node_bump");
 }
 

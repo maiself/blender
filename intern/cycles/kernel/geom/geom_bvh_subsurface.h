@@ -246,25 +246,6 @@ ccl_device void BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
 						break;
 					}
 #endif
-#ifdef __MICRODISPLACEMENT__
-					case PRIMITIVE_SUBPATCH: {
-						/* intersect ray against primitive */
-						for(; primAddr < primAddr2; primAddr++) {
-							kernel_assert(kernel_tex_fetch(__prim_type, primAddr) == type);
-							subpatch_intersect_subsurface(kg,
-							                              &isect_precalc,
-							                              ss_isect,
-							                              P,
-							                              dir,
-							                              object,
-							                              primAddr,
-							                              isect_t,
-							                              lcg_state,
-							                              max_hits);
-						}
-						break;
-					}
-#endif /* __MICRODISPLACEMENT__ */
 					default: {
 						break;
 					}

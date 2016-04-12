@@ -385,11 +385,6 @@ class CyclesRender_PT_performance(CyclesButtonsPanel, Panel):
         col.label(text="Acceleration structure:")
         col.prop(cscene, "debug_use_spatial_splits")
 
-        col.separator()
-
-        col.label(text="Geometry Cache:")
-        col.prop(cscene, "geom_cache_max_size", text="Max Size")
-
 
 class CyclesRender_PT_layer_options(CyclesButtonsPanel, Panel):
     bl_label = "Layer"
@@ -686,27 +681,10 @@ class Cycles_PT_mesh_displacement(CyclesButtonsPanel, Panel):
         elif mball:
             cdata = mball.cycles
 
-        split = layout.split()
+        layout.prop(cdata, "displacement_method", text="Method")
+        layout.prop(cdata, "use_subdivision")
+        layout.prop(cdata, "dicing_rate")
 
-        col = split.column()
-        sub = col.column()
-        sub.label(text="Displacment:")
-        sub.prop(cdata, "displacement_method", text="")
-        sub.prop(cdata, "displacement_scale", text="Scale")
-
-        col = split.column()
-        sub = col.column(align=True)
-        sub.label(text="Subdivision:")
-        sub.prop(cdata, "subdivision_type", text="")
-
-        if cdata.subdivision_type != 'NONE':
-            sub.label(text="Subdivision Rate:")
-            sub.prop(cdata, "dicing_rate", text="Render")
-            preview_sub = sub.row(align=True)
-            preview_sub.prop(cdata, "preview_dicing_rate", text="Preview")
-            preview_sub.prop(cdata, "preview_displacement", text="", icon="RESTRICT_VIEW_OFF")
-            sub.separator()
-            sub.prop(cdata, "max_subdivision_level")
 
 class CyclesObject_PT_motion_blur(CyclesButtonsPanel, Panel):
     bl_label = "Motion Blur"

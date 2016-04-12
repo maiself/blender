@@ -32,7 +32,7 @@ enum ObjectTransform {
 	OBJECT_INVERSE_TRANSFORM = 4,
 	OBJECT_TRANSFORM_MOTION_POST = 4,
 	OBJECT_PROPERTIES = 8,
-	OBJECT_DUPLI = 10
+	OBJECT_DUPLI = 9
 };
 
 enum ObjectVectorTransform {
@@ -236,30 +236,6 @@ ccl_device_inline float object_random_number(KernelGlobals *kg, int object)
 	int offset = object*OBJECT_SIZE + OBJECT_PROPERTIES;
 	float4 f = kernel_tex_fetch(__objects, offset);
 	return f.z;
-}
-
-/* Displacement scale for objects mesh */
-
-ccl_device_inline float object_displacement_scale(KernelGlobals *kg, int object)
-{
-	if(object == OBJECT_NONE)
-		return 1.0f;
-
-	int offset = object*OBJECT_SIZE + OBJECT_PROPERTIES+1;
-	float4 f = kernel_tex_fetch(__objects, offset);
-	return f.x;
-}
-
-/* Displacement method for objects mesh */
-
-ccl_device_inline uint object_displacement_method(KernelGlobals *kg, int object)
-{
-	if(object == OBJECT_NONE)
-		return OBJECT_DISPLACEMENT_BUMP;
-
-	int offset = object*OBJECT_SIZE + OBJECT_PROPERTIES+1;
-	float4 f = kernel_tex_fetch(__objects, offset);
-	return __float_as_uint(f.y);
 }
 
 /* Particle ID from which this object was generated */

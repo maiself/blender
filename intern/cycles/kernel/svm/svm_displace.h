@@ -22,8 +22,8 @@ ccl_device void svm_node_set_bump(KernelGlobals *kg, ShaderData *sd, float *stac
 {
 #ifdef __RAY_DIFFERENTIALS__
 	/* get normal input */
-	uint normal_offset, distance_offset, flags;
-	decode_node_uchar4(node.y, &normal_offset, &distance_offset, &flags, NULL);
+	uint normal_offset, distance_offset, invert;
+	decode_node_uchar4(node.y, &normal_offset, &distance_offset, &invert, NULL);
 
 	float3 normal_in = stack_valid(normal_offset)? stack_load_float3(stack, normal_offset): ccl_fetch(sd, N);
 
@@ -47,10 +47,8 @@ ccl_device void svm_node_set_bump(KernelGlobals *kg, ShaderData *sd, float *stac
 
 	float strength = stack_load_float(stack, strength_offset);
 	float distance = stack_load_float(stack, distance_offset);
-	if(flags & NODE_BUMP_OVERRIDE)
-		distance = object_displacement_scale(kg, sd->object);
 
-	if(flags & NODE_BUMP_INVERT)
+	if(invert)
 		distance *= -1.0f;
 
 	strength = max(strength, 0.0f);
@@ -64,10 +62,10 @@ ccl_device void svm_node_set_bump(KernelGlobals *kg, ShaderData *sd, float *stac
 
 /* Displacement Node */
 
-ccl_device void svm_node_set_displacement(KernelGlobals *kg, ShaderData *sd, float *stack, uint fac_offset)
+ccl_device void svm_node_set_displacement(ShaderData *sd, float *stack, uint fac_offset)
 {
 	float d = stack_load_float(stack, fac_offset);
-	ccl_fetch(sd, P) += ccl_fetch(sd, N) * d * object_displacement_scale(kg, sd->object);
+	ccl_fetch(sd, P) += ccl_fetch(sd, N)*d*0.1f; /* todo: get rid of this factor */
 }
 
 CCL_NAMESPACE_END

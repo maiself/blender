@@ -142,7 +142,6 @@ public:
 	static ustring u_ndc;
 	static ustring u_object_location;
 	static ustring u_object_index;
-	static ustring u_object_displacement_scale;
 	static ustring u_geom_dupli_generated;
 	static ustring u_geom_dupli_uv;
 	static ustring u_material_index;

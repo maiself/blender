@@ -177,20 +177,6 @@ void BVHBuild::add_reference_mesh(BoundBox& root, BoundBox& center, Mesh *mesh, 
 			}
 		}
 	}
-
-	for(uint j = 0; j < mesh->subpatches.size(); j++) {
-		Mesh::SubPatch& subpatch = mesh->subpatches[j];
-		BoundBox bounds = BoundBox::empty;
-		PrimitiveType type = PRIMITIVE_SUBPATCH;
-
-		subpatch.bounds_grow(bounds);
-
-		if(bounds.valid()) {
-			references.push_back(BVHReference(bounds, j, i, type));
-			root.grow(bounds);
-			center.grow(bounds.center2());
-		}
-	}
 }
 
 void BVHBuild::add_reference_object(BoundBox& root, BoundBox& center, Object *ob, int i)
@@ -220,7 +206,6 @@ void BVHBuild::add_references(BVHRange& root)
 			if(!ob->mesh->is_instanced()) {
 				num_alloc_references += ob->mesh->triangles.size();
 				num_alloc_references += count_curve_segments(ob->mesh);
-				num_alloc_references += ob->mesh->subpatches.size();
 			}
 			else
 				num_alloc_references++;
@@ -228,7 +213,6 @@ void BVHBuild::add_references(BVHRange& root)
 		else {
 			num_alloc_references += ob->mesh->triangles.size();
 			num_alloc_references += count_curve_segments(ob->mesh);
-			num_alloc_references += ob->mesh->subpatches.size();
 		}
 	}
 
@@ -428,7 +412,6 @@ bool BVHBuild::range_within_max_leaf_size(const BVHRange& range,
 	size_t num_triangles = 0;
 	size_t num_curves = 0;
 	size_t num_motion_curves = 0;
-	size_t num_subpatches = 0;
 
 	for(int i = 0; i < size; i++) {
 		const BVHReference& ref = references[range.start() + i];
@@ -439,14 +422,11 @@ bool BVHBuild::range_within_max_leaf_size(const BVHRange& range,
 			num_motion_curves++;
 		else if(ref.prim_type() & PRIMITIVE_ALL_TRIANGLE)
 			num_triangles++;
-		else if(ref.prim_type() & PRIMITIVE_SUBPATCH)
-			num_subpatches++;
 	}
 
 	return (num_triangles < params.max_triangle_leaf_size) &&
 	       (num_curves < params.max_curve_leaf_size) &&
-	       (num_motion_curves < params.max_curve_leaf_size) &&
-	       (num_subpatches < params.max_subpatch_leaf_size);
+	       (num_motion_curves < params.max_curve_leaf_size);
 }
 
 /* multithreaded binning builder */
@@ -633,8 +613,6 @@ BVHNode* BVHBuild::create_leaf_node(const BVHRange& range,
 	uint visibility[PRIMITIVE_NUM_TOTAL] = {0};
 	/* NOTE: Keep initializtion in sync with actual number of primitives. */
 	BoundBox bounds[PRIMITIVE_NUM_TOTAL] = {BoundBox::empty,
-	                                        BoundBox::empty,
-	                                        BoundBox::empty,
 	                                        BoundBox::empty,
 	                                        BoundBox::empty,
 	                                        BoundBox::empty};

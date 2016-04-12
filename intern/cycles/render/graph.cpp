@@ -988,8 +988,7 @@ void ShaderGraph::bump_from_displacement()
 	ShaderNode *set_normal = add(new SetNormalNode());
 	
 	/* add bump node and connect copied graphs to it */
-	BumpNode *bump = (BumpNode*)add(new BumpNode());
-	bump->displacement_override = true;
+	ShaderNode *bump = add(new BumpNode());
 
 	ShaderOutput *out = displacement_in->link;
 	ShaderOutput *out_center = nodes_center[out->parent]->output(out->name);

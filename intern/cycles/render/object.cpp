@@ -310,7 +310,6 @@ void ObjectManager::device_update_transforms(Device *device, DeviceScene *dscene
 		memcpy(&objects[offset+4], &itfm, sizeof(float4)*3);
 		/* OBJECT_PROPERTIES */
 		objects[offset+8] = make_float4(surface_area, pass_id, random_number, __int_as_float(particle_index));
-		objects[offset+9] = make_float4(mesh->displacement_scale, __int_as_float(mesh->displacement_method), 0, 0);
 
 		if(need_motion == Scene::MOTION_PASS) {
 			/* motion transformations, is world/object space depending if mesh
@@ -353,8 +352,8 @@ void ObjectManager::device_update_transforms(Device *device, DeviceScene *dscene
 		int numverts = mesh->verts.size();
 		int numkeys = mesh->curve_keys.size();
 
-		objects[offset+10] = make_float4(ob->dupli_generated[0], ob->dupli_generated[1], ob->dupli_generated[2], __int_as_float(numkeys));
-		objects[offset+11] = make_float4(ob->dupli_uv[0], ob->dupli_uv[1], __int_as_float(numsteps), __int_as_float(numverts));
+		objects[offset+9] = make_float4(ob->dupli_generated[0], ob->dupli_generated[1], ob->dupli_generated[2], __int_as_float(numkeys));
+		objects[offset+10] = make_float4(ob->dupli_uv[0], ob->dupli_uv[1], __int_as_float(numsteps), __int_as_float(numverts));
 
 		/* object flag */
 		if(ob->use_holdout)
@@ -463,11 +462,6 @@ void ObjectManager::device_update_flags(Device *device,
 			 */
 			object_flag[object_index] |= SD_OBJECT_INTERSECTS_VOLUME;
 		}
-
-		if(object->mesh->displacement_method != Mesh::DISPLACE_BUMP) {
-			object_flag[object_index] |= SD_OBJECT_HAS_DISPLACEMENT;
-		}
-
 		++object_index;
 	}
 
@@ -524,8 +518,7 @@ void ObjectManager::apply_static_transforms(DeviceScene *dscene, Scene *scene, u
 		 * Could be solved by moving reference counter to Mesh.
 		 */
 		if((mesh_users[object->mesh] == 1 && !object->mesh->has_surface_bssrdf) &&
-		   object->mesh->displacement_method == Mesh::DISPLACE_BUMP &&
-		   object->mesh->subdivision_type == Mesh::SUBDIVISION_NONE)
+		   object->mesh->displacement_method == Mesh::DISPLACE_BUMP)
 		{
 			if(!(motion_blur && object->use_motion)) {
 				if(!object->mesh->transform_applied) {

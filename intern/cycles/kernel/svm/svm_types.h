@@ -350,11 +350,6 @@ typedef enum NodeImageProjection {
 	NODE_IMAGE_PROJ_TUBE   = 3,
 } NodeImageProjection;
 
-typedef enum NodeBumpFlags {
-	NODE_BUMP_INVERT = (1 << 0),
-	NODE_BUMP_OVERRIDE = (1 << 1),
-} NodeBumpFlags;
-
 typedef enum NodeBumpOffset {
 	NODE_BUMP_OFFSET_CENTER,
 	NODE_BUMP_OFFSET_DX,

@@ -76,7 +76,6 @@ ustring OSLRenderServices::u_raster("raster");
 ustring OSLRenderServices::u_ndc("NDC");
 ustring OSLRenderServices::u_object_location("object:location");
 ustring OSLRenderServices::u_object_index("object:index");
-ustring OSLRenderServices::u_object_displacement_scale("object:displacement_scale");
 ustring OSLRenderServices::u_geom_dupli_generated("geom:dupli_generated");
 ustring OSLRenderServices::u_geom_dupli_uv("geom:dupli_uv");
 ustring OSLRenderServices::u_material_index("material:index");
@@ -604,10 +603,6 @@ bool OSLRenderServices::get_object_standard_attribute(KernelGlobals *kg, ShaderD
 		float f = object_pass_id(kg, sd->object);
 		return set_attribute_float(f, type, derivatives, val);
 	}
-	else if(name == u_object_displacement_scale) {
-		float f = object_displacement_scale(kg, sd->object);
-		return set_attribute_float(f, type, derivatives, val);
-	}
 	else if(name == u_geom_dupli_generated) {
 		float3 f = object_dupli_generated(kg, sd->object);
 		return set_attribute_float3(f, type, derivatives, val);
@@ -675,7 +670,7 @@ bool OSLRenderServices::get_object_standard_attribute(KernelGlobals *kg, ShaderD
 	}
 	else if((name == u_geom_trianglevertices || name == u_geom_polyvertices)
 #ifdef __HAIR__
-		     && sd->type & (PRIMITIVE_ALL_TRIANGLE | PRIMITIVE_CACHE_TRIANGLE))
+		     && sd->type & PRIMITIVE_ALL_TRIANGLE)
 #else
 		)
 #endif
@@ -684,12 +679,8 @@ bool OSLRenderServices::get_object_standard_attribute(KernelGlobals *kg, ShaderD
 
 		if(sd->type & PRIMITIVE_TRIANGLE)
 			triangle_vertices(kg, sd->prim, P);
-		else if(sd->type & PRIMITIVE_MOTION_TRIANGLE)
+		else
 			motion_triangle_vertices(kg, sd->object, sd->prim, sd->time, P);
-		else {
-			for(int i = 0; i < 3; i++)
-				P[i] = sd->cache_triangle.verts[i];
-		}
 
 		if(!(sd->flag & SD_TRANSFORM_APPLIED)) {
 			object_position_transform(kg, sd, &P[0]);

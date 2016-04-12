@@ -83,8 +83,8 @@ Camera::Camera()
 	nearclip = 1e-5f;
 	farclip = 1e5f;
 
-	width = 0;
-	height = 0;
+	width = 1024;
+	height = 512;
 	resolution = 1;
 
 	viewplane.left = -((float)width/(float)height);
@@ -158,15 +158,12 @@ void Camera::update()
 
 	/* ndc to raster */
 	Transform ndctoraster = transform_scale(width, height, 1.0f) * bordertofull;
-	Transform ndctorasterorig = transform_scale(widthorig, heightorig, 1.0f) * bordertofull;
 
 	/* raster to screen */
 	Transform screentondc = fulltoborder * transform_from_viewplane(viewplane);
 
 	Transform screentoraster = ndctoraster * screentondc;
 	Transform rastertoscreen = transform_inverse(screentoraster);
-	Transform screentorasterorig = ndctorasterorig * screentondc;
-	Transform rasterorigtoscreen = transform_inverse(screentorasterorig);
 
 	/* screen to camera */
 	Transform cameratoscreen;
@@ -180,7 +177,6 @@ void Camera::update()
 	Transform screentocamera = transform_inverse(cameratoscreen);
 
 	rastertocamera = screentocamera * rastertoscreen;
-	Transform rasterorigtocamera = screentocamera * rasterorigtoscreen;
 	cameratoraster = screentoraster * cameratoscreen;
 
 	cameratoworld = matrix;
@@ -200,18 +196,12 @@ void Camera::update()
 	if(type == CAMERA_ORTHOGRAPHIC) {
 		dx = transform_direction(&rastertocamera, make_float3(1, 0, 0));
 		dy = transform_direction(&rastertocamera, make_float3(0, 1, 0));
-		dxorig = transform_direction(&rasterorigtocamera, make_float3(1, 0, 0));
-		dyorig = transform_direction(&rasterorigtocamera, make_float3(0, 1, 0));
 	}
 	else if(type == CAMERA_PERSPECTIVE) {
 		dx = transform_perspective(&rastertocamera, make_float3(1, 0, 0)) -
 		     transform_perspective(&rastertocamera, make_float3(0, 0, 0));
 		dy = transform_perspective(&rastertocamera, make_float3(0, 1, 0)) -
 		     transform_perspective(&rastertocamera, make_float3(0, 0, 0));
-		dxorig = transform_perspective(&rasterorigtocamera, make_float3(1, 0, 0)) -
-		     transform_perspective(&rasterorigtocamera, make_float3(0, 0, 0));
-		dyorig = transform_perspective(&rasterorigtocamera, make_float3(0, 1, 0)) -
-		     transform_perspective(&rasterorigtocamera, make_float3(0, 0, 0));
 	}
 	else {
 		dx = make_float3(0.0f, 0.0f, 0.0f);
@@ -220,8 +210,6 @@ void Camera::update()
 
 	dx = transform_direction(&cameratoworld, dx);
 	dy = transform_direction(&cameratoworld, dy);
-	dxorig = transform_direction(&cameratoworld, dxorig);
-	dyorig = transform_direction(&cameratoworld, dyorig);
 
 	/* TODO(sergey): Support other types of camera. */
 	if(type == CAMERA_PERSPECTIVE) {
@@ -549,34 +537,6 @@ BoundBox Camera::viewplane_bounds_get()
 		}
 	}
 	return bounds;
-}
-
-float Camera::pixel_width_at_point(float3 P)
-{
-	if(type == CAMERA_ORTHOGRAPHIC) {
-		return min(len(dxorig), len(dyorig));
-	}
-	else if(type == CAMERA_PERSPECTIVE) {
-		/* calculate as if point is directly ahead of the camera */
-		float3 raster = make_float3(0.5f*width, 0.5f*height, 0.0f);
-		float3 Pcamera = transform_perspective(&rastertocamera, raster);
-
-		/* dDdx */
-		float3 Ddiff = transform_direction(&cameratoworld, Pcamera);
-		float3 dx = len_squared(dxorig) < len_squared(dyorig) ? dxorig : dyorig;
-		float3 dDdx = normalize(Ddiff + dx) - normalize(Ddiff);
-
-		/* dPdx */
-		float dist = len(transform_point(&worldtocamera, P));
-		float3 D = normalize(Ddiff);
-		return len(dist*dDdx - dot(dist*dDdx, D)*D);
-	}
-	else {
-		// TODO(mai): implement for CAMERA_PANORAMA
-		assert(!"pixel width calculation for panoramic projection not implemented yet");
-	}
-
-	return 1.0f;
 }
 
 CCL_NAMESPACE_END

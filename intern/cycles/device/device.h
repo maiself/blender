@@ -34,8 +34,6 @@ CCL_NAMESPACE_BEGIN
 class Progress;
 class RenderTile;
 
-struct GeomCache;
-
 /* Device Types */
 
 enum DeviceType {
@@ -233,8 +231,6 @@ public:
 
 	/* open shading language, only for CPU device */
 	virtual void *osl_memory() { return NULL; }
-
-	virtual GeomCache *get_geom_cache() { return NULL; }
 
 	/* load/compile kernels, must be called before adding tasks */ 
 	virtual bool load_kernels(

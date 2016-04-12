@@ -343,40 +343,6 @@ ccl_device uint BVH_FUNCTION_FULL_NAME(QBVH)(KernelGlobals *kg,
 							break;
 						}
 #endif  /* BVH_HAIR */
-#ifdef __MICRODISPLACEMENT__
-						case PRIMITIVE_SUBPATCH: {
-							/* intersect ray against primitive */
-							for(; primAddr < primAddr2; primAddr++) {
-								kernel_assert(kernel_tex_fetch(__prim_type, primAddr) == type);
-								/* only primitives from volume object */
-								uint tri_object = (object == OBJECT_NONE)? kernel_tex_fetch(__prim_object, primAddr): object;
-								int object_flag = kernel_tex_fetch(__object_flag, tri_object);
-								if((object_flag & SD_OBJECT_HAS_VOLUME) == 0) {
-									continue;
-								}
-
-#if BVH_FEATURE(BVH_INSTANCING)
-#  if !BVH_FEATURE(BVH_MOTION)
-								Transform ob_itfm = object_fetch_transform(kg, object, OBJECT_INVERSE_TRANSFORM);
-#  endif
-								hit = subpatch_intersect_volume_all(kg, &isect_precalc, &isect_array,
-								                                    max_hits, &num_hits, &num_hits_in_instance,
-								                                    isect_t, P, dir, visibility, &ob_itfm,
-								                                    object, primAddr);
-#else
-								hit = subpatch_intersect_volume_all(kg, &isect_precalc, &isect_array,
-								                                    max_hits, &num_hits, NULL,
-								                                    isect_t, P, dir, visibility, NULL,
-								                                    object, primAddr);
-#endif
-
-								if(hit) {
-									return num_hits;
-								}
-							}
-							break;
-						}
-#endif /* __MICRODISPLACEMENT__ */
 					}
 				}
 #if BVH_FEATURE(BVH_INSTANCING)

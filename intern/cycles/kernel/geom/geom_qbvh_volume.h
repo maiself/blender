@@ -269,22 +269,6 @@ ccl_device bool BVH_FUNCTION_FULL_NAME(QBVH)(KernelGlobals *kg,
 							break;
 						}
 #endif
-#ifdef __MICRODISPLACEMENT__
-						case PRIMITIVE_SUBPATCH: {
-							for(; primAddr < primAddr2; primAddr++) {
-								kernel_assert(kernel_tex_fetch(__prim_type, primAddr) == type);
-								/* Only primitives from volume object. */
-								uint tri_object = (object == OBJECT_NONE)? kernel_tex_fetch(__prim_object, primAddr): object;
-								int object_flag = kernel_tex_fetch(__object_flag, tri_object);
-								if((object_flag & SD_OBJECT_HAS_VOLUME) == 0) {
-									continue;
-								}
-								/* Intersect ray against primitive. */
-								subpatch_intersect(kg, &isect_precalc, isect, P, dir, visibility, object, primAddr);
-							}
-							break;
-						}
-#endif /* __MICRODISPLACEMENT__ */
 					}
 				}
 #if BVH_FEATURE(BVH_INSTANCING)

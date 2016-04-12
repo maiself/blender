@@ -18,8 +18,6 @@
 
 displacement node_output_displacement(float Displacement = 0.0)
 {
-	float scale = 1.0;
-	getattribute("object:displacement_scale", scale);
-	P += N * Displacement * scale;
+	P += N * Displacement * 0.1;  /* todo: get rid of this factor */
 }
 

@@ -398,11 +398,6 @@ ccl_device_inline void print_float2(const char *label, const float2& a)
 
 #ifndef __KERNEL_OPENCL__
 
-ccl_device_inline float interp(float a, float b, float t)
-{
-	return a + t*(b - a);
-}
-
 ccl_device_inline float2 interp(float2 a, float2 b, float t)
 {
 	return a + t*(b - a);

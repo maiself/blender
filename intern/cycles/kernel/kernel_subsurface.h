@@ -297,14 +297,14 @@ ccl_device int subsurface_scatter_multi_intersect(
 	for(int hit = 0; hit < num_eval_hits; hit++) {
 		/* Quickly retrieve P and Ng without setting up ShaderData. */
 		float3 hit_P;
-		if(ss_isect->hits[hit].type & PRIMITIVE_TRIANGLE) {
+		if(ccl_fetch(sd, type) & PRIMITIVE_TRIANGLE) {
 			hit_P = triangle_refine_subsurface(kg,
 			                                   sd,
 			                                   &ss_isect->hits[hit],
 			                                   ray);
 		}
 #ifdef __OBJECT_MOTION__
-		else  if(ss_isect->hits[hit].type & PRIMITIVE_MOTION_TRIANGLE) {
+		else  if(ccl_fetch(sd, type) & PRIMITIVE_MOTION_TRIANGLE) {
 			float3 verts[3];
 			motion_triangle_vertices(
 			        kg,
@@ -319,15 +319,6 @@ ccl_device int subsurface_scatter_multi_intersect(
 			                                          verts);
 		}
 #endif  /* __OBJECT_MOTION__ */
-#ifdef __MICRODISPLACEMENT__
-		else if(ss_isect->hits[hit].type & PRIMITIVE_CACHE_TRIANGLE) {
-			hit_P = cache_triangle_refine_subsurface(kg,
-			                                   sd,
-			                                   &ss_isect->hits[hit].cache_triangle,
-			                                   &ss_isect->hits[hit],
-			                                   ray);
-		}
-#endif /* __MICRODISPLACEMENT__ */
 
 		float3 hit_Ng = ss_isect->Ng[hit];
 		if(ss_isect->hits[hit].object != OBJECT_NONE) {

@@ -923,13 +923,11 @@ public:
 	}
 
 	bool invert;
-	bool displacement_override; // true if this node is being used as part of the displacement output
 
 	virtual bool equals(const ShaderNode *other) {
 		const BumpNode *bump_node = (const BumpNode*)other;
 		return ShaderNode::equals(other) &&
-		       invert == bump_node->invert &&
-               displacement_override == bump_node->displacement_override;
+		       invert == bump_node->invert;
 	}
 };
 

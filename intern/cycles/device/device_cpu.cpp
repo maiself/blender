@@ -35,8 +35,6 @@
 #include "osl_shader.h"
 #include "osl_globals.h"
 
-#include "geom/geom_cache.h"
-
 #include "buffers.h"
 
 #include "util_debug.h"
@@ -66,8 +64,6 @@ public:
 #ifdef WITH_OSL
 		kernel_globals.osl = &osl_globals;
 #endif
-
-		kernel_globals.geom_cache = geom_cache_create();
 
 		/* do now to avoid thread issues */
 		system_cpu_support_sse2();
@@ -114,7 +110,6 @@ public:
 	~CPUDevice()
 	{
 		task_pool.stop();
-		geom_cache_release(kernel_globals.geom_cache);
 	}
 
 	void mem_alloc(device_memory& mem, MemoryType /*type*/)
@@ -192,11 +187,6 @@ public:
 #endif
 	}
 
-	GeomCache *get_geom_cache()
-	{
-		return kernel_globals.geom_cache;
-	}
-
 	void thread_run(DeviceTask *task)
 	{
 		if(task->type == DeviceTask::PATH_TRACE)
@@ -228,7 +218,6 @@ public:
 #ifdef WITH_OSL
 		OSLShader::thread_init(&kg, &kernel_globals, &osl_globals);
 #endif
-		geom_cache_thread_init(&kg, kernel_globals.geom_cache);
 
 		RenderTile tile;
 
@@ -401,8 +390,6 @@ public:
 #ifdef WITH_OSL
 		OSLShader::thread_init(&kg, &kernel_globals, &osl_globals);
 #endif
-		geom_cache_thread_init(&kg, kernel_globals.geom_cache);
-
 		void(*shader_kernel)(KernelGlobals*, uint4*, float4*, float*, int, int, int, int, int);
 
 #ifdef WITH_CYCLES_OPTIMIZED_KERNEL_AVX2

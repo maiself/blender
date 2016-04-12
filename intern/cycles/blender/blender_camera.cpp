@@ -360,12 +360,6 @@ static void blender_camera_sync(Camera *cam, BlenderCamera *bcam, int width, int
 	blender_camera_viewplane(bcam, width, height,
 		&cam->viewplane, &aspectratio, &sensor_size);
 
-	cam->width = bcam->full_width;
-	cam->height = bcam->full_height;
-
-	cam->widthorig = width;
-	cam->heightorig = height;
-
 	/* panorama sensor */
 	if(bcam->type == CAMERA_PANORAMA && bcam->panorama_type == PANORAMA_FISHEYE_EQUISOLID) {
 		float fit_xratio = (float)bcam->full_width*bcam->pixelaspect.x;

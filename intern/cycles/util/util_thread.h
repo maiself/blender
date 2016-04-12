@@ -32,8 +32,6 @@
 #  include <libkern/OSAtomic.h>
 #endif
 
-#include <boost/thread/tss.hpp>
-
 #include "util_function.h"
 
 CCL_NAMESPACE_BEGIN
@@ -48,8 +46,6 @@ typedef boost::mutex thread_mutex;
 typedef boost::mutex::scoped_lock thread_scoped_lock;
 typedef boost::condition_variable thread_condition_variable;
 #endif
-
-using boost::thread_specific_ptr;
 
 /* own pthread based implementation, to avoid boost version conflicts with
  * dynamically loaded blender plugins */

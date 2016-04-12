@@ -31,7 +31,6 @@ ccl_device void svm_node_attr_init(KernelGlobals *kg, ShaderData *sd,
 #ifdef __HAIR__
 		attr_offset = (ccl_fetch(sd, type) & PRIMITIVE_ALL_CURVE)? attr_offset + ATTR_PRIM_CURVE: attr_offset;
 #endif
-		attr_offset = (ccl_fetch(sd, type) & PRIMITIVE_CACHE_TRIANGLE)? attr_offset + ATTR_PRIM_SUBD: attr_offset;
 		uint4 attr_map = kernel_tex_fetch(__attributes_map, attr_offset);
 		
 		while(attr_map.x != id) {

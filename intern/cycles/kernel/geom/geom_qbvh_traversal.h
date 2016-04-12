@@ -348,23 +348,6 @@ ccl_device bool BVH_FUNCTION_FULL_NAME(QBVH)(KernelGlobals *kg,
 							break;
 						}
 #endif  /* BVH_FEATURE(BVH_HAIR) */
-#ifdef __MICRODISPLACEMENT__
-						case PRIMITIVE_SUBPATCH: {
-							for(; primAddr < primAddr2; primAddr++) {
-#if defined(__KERNEL_DEBUG__)
-								isect->num_traversal_steps++;
-#endif
-								kernel_assert(kernel_tex_fetch(__prim_type, primAddr) == type);
-								if(subpatch_intersect(kg, &isect_precalc, isect, P, dir, visibility, object, primAddr)) {
-									tfar = ssef(isect->t);
-									/* shadow ray early termination */
-									if(visibility == PATH_RAY_SHADOW_OPAQUE)
-										return true;
-								}
-							}
-							break;
-						}
-#endif /* __MICRODISPLACEMENT__ */
 					}
 				}
 #if BVH_FEATURE(BVH_INSTANCING)

@@ -27,7 +27,6 @@ surface node_bump(
 	float SampleCenter = 0.0,
 	float SampleX = 0.0,
 	float SampleY = 0.0,
-	int displacement_scale_override = 0,
 	output normal NormalOut = N)
 {
 	/* get surface tangents from normal */
@@ -45,8 +44,6 @@ surface node_bump(
 
 	float strength = max(Strength, 0.0);
 	float dist = Distance;
-	if(displacement_scale_override)
-		getattribute("object:displacement_scale", dist);
 
 	if (invert)
 		dist *= -1.0;
