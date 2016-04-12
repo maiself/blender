@@ -501,7 +501,7 @@ class CyclesRenderSettings(bpy.types.PropertyGroup):
         cls.geom_cache_max_size = IntProperty(
                 name="Geometry Cache Size",
                 description="Maximum size of the geometry cache in MB",
-                min=128, max=1024*4,
+                min=128,
                 default=256,
                 )
 

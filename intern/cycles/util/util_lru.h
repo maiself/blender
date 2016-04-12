@@ -41,7 +41,7 @@ public:
 			uint ready;
 			uint used;
 			uint refcount;
-			uint size;
+			size_t size;
 
 			intrusive_ref_t() {
 				memset(this, 0, sizeof(intrusive_ref_t));
@@ -174,8 +174,8 @@ public:
 
 	thread_specific_ptr<thread_data_t> thread_data;
 
-	uint max_size;
-	uint current_size;
+	size_t max_size;
+	size_t current_size;
 	thread_mutex check_size_lock;
 	key_t cursor;
 
@@ -194,9 +194,9 @@ public:
 		set_max_size(max_size);
 	}
 
-	void set_max_size(uint size) {
-		max_size = std::min(size, (uint)1024*1024*1000*4); /* just under 4gb */
-		max_size = std::max(max_size, (uint)1024*1024*128); /* 128 mb */
+	void set_max_size(size_t size) {
+		max_size = std::min(size, (size_t)SIZE_MAX);
+		max_size = std::max(max_size, (size_t)1024 * 1024 * 128); /* 128 mb */
 	}
 
 	void check_size() {
@@ -209,7 +209,7 @@ public:
 		typename map_t::iterator it = entries.find(cursor);
 		int num_loops = 0;
 
-		while(atomic_cas_uint32(&current_size, 0, 0) > max_size && num_loops < 100) {
+		while(atomic_cas_z(&current_size, 0, 0) > max_size && num_loops < 100) {
 			if(it == entries.end()) {
 				it = entries.begin();
 
@@ -224,7 +224,7 @@ public:
 			bool was_used = ref.mark_unused();
 			if(!was_used) {
 				key_t key = it->first;
-				atomic_sub_uint32(&current_size, ref.get_size());
+				atomic_sub_z(&current_size, ref.get_size());
 
 				it++;
 				if(it)
@@ -254,7 +254,7 @@ public:
 		check_size();
 
 		value.mark_used();
-		atomic_add_uint32(&current_size, value.get_size());
+		atomic_add_z(&current_size, value.get_size());
 
 		return entries.insert(key, value);
 	}
@@ -288,7 +288,7 @@ public:
 		value.mark_used();
 		check_size();
 		value.mark_used();
-		atomic_add_uint32(&current_size, value.get_size());
+		atomic_add_z(&current_size, value.get_size());
 	}
 
 	void clear() {
