@@ -181,7 +181,7 @@ ccl_device float cache_triangle_attribute_float(KernelGlobals *kg, const ShaderD
 		if(dx) *dx = 0.0f;
 		if(dy) *dy = 0.0f;
 
-		return kernel_tex_fetch(__attributes_float, offset + ccl_fetch(sd, prim));
+		return kernel_tex_fetch(__attributes_float, offset + ccl_fetch(sd, cache_triangle).patch);
 	}
 	else if(elem == ATTR_ELEMENT_VERTEX || elem == ATTR_ELEMENT_VERTEX_MOTION) {
 		float2 uv[3];
@@ -263,7 +263,7 @@ ccl_device float3 cache_triangle_attribute_float3(KernelGlobals *kg, const Shade
 		if(dx) *dx = make_float3(0.0f, 0.0f, 0.0f);
 		if(dy) *dy = make_float3(0.0f, 0.0f, 0.0f);
 
-		return float4_to_float3(kernel_tex_fetch(__attributes_float3, offset + ccl_fetch(sd, prim)));
+		return float4_to_float3(kernel_tex_fetch(__attributes_float3, offset + ccl_fetch(sd, cache_triangle).patch));
 	}
 	else if(elem == ATTR_ELEMENT_VERTEX || elem == ATTR_ELEMENT_VERTEX_MOTION) {
 		float2 uv[3];
