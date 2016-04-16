@@ -14,9 +14,6 @@
  * limitations under the License.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "camera.h"
 #include "mesh.h"
 

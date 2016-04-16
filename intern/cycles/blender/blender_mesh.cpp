@@ -844,7 +844,7 @@ Mesh *BlenderSync::sync_mesh(BL::Object& b_ob,
 			if(render_layer.use_surfaces && !hide_tris) {
 				mesh->displacement_scale = RNA_float_get(&cmesh, "displacement_scale");
 
-				if(cmesh.data && is_cpu && experimental && RNA_enum_get(&cmesh, "subdivision_type") != 0 &&
+				if(cmesh.data && is_cpu && experimental && RNA_enum_get(&cmesh, "subdivision_type") &&
 						(!preview || RNA_boolean_get(&cmesh, "preview_displacement")))
 				{
 					create_subd_mesh(scene, mesh, b_ob, b_mesh, &cmesh, used_shaders, preview);
