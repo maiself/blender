@@ -508,11 +508,12 @@ static void attr_create_uv_map(Scene *scene,
 /* Create vertex pointiness attributes. */
 static void attr_create_pointiness(Scene *scene,
                                    Mesh *mesh,
-                                   BL::Mesh& b_mesh)
+                                   BL::Mesh& b_mesh,
+                                   bool subdivision)
 {
 	if(mesh->need_attribute(scene, ATTR_STD_POINTINESS)) {
 		const int numverts = b_mesh.vertices.length();
-		Attribute *attr = mesh->attributes.add(ATTR_STD_POINTINESS);
+		Attribute *attr = (subdivision? mesh->subd_attributes: mesh->attributes).add(ATTR_STD_POINTINESS);
 		float *data = attr->data_float();
 		int *counter = new int[numverts];
 		float *raw_data = new float[numverts];
@@ -625,7 +626,7 @@ static void create_mesh(Scene *scene,
 	}
 
 	/* Create needed vertex attributes. */
-	attr_create_pointiness(scene, mesh, b_mesh);
+	attr_create_pointiness(scene, mesh, b_mesh, subdivision);
 
 	/* create faces */
 	vector<int> nverts(numfaces);
