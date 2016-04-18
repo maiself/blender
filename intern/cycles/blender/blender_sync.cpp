@@ -502,7 +502,7 @@ SceneParams BlenderSync::get_scene_params(BL::Scene& b_scene,
 		params.use_qbvh = false;
 	}
 
-	params.geom_cache_max_size = (size_t)get_int(cscene, "geom_cache_max_size") * 1024*1024;
+	params.geom_cache_max_size = std::min((size_t)get_int(cscene, "geom_cache_max_size"), SIZE_MAX/(1024*1024)) * 1024*1024;
 
 	return params;
 }
