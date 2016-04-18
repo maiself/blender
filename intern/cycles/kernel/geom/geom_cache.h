@@ -24,7 +24,7 @@ void geom_cache_release(GeomCache *geom_cache);
 void geom_cache_set_scene(GeomCache *geom_cache, void *scene);
 void geom_cache_thread_init(KernelGlobals *kg, GeomCache *geom_cache);
 void geom_cache_clear(GeomCache *geom_cache);
-void geom_cache_set_max_size(GeomCache * geom_cache, uint max_size);
+void geom_cache_set_max_size(GeomCache * geom_cache, size_t max_size);
 
 TessellatedSubPatch* geom_cache_get_subpatch(KernelGlobals *kg, int object, int prim);
 void geom_cache_release_subpatch(KernelGlobals *kg, TessellatedSubPatch *subpatch);

@@ -508,11 +508,12 @@ static void attr_create_uv_map(Scene *scene,
 /* Create vertex pointiness attributes. */
 static void attr_create_pointiness(Scene *scene,
                                    Mesh *mesh,
-                                   BL::Mesh& b_mesh)
+                                   BL::Mesh& b_mesh,
+                                   bool subdivision)
 {
 	if(mesh->need_attribute(scene, ATTR_STD_POINTINESS)) {
 		const int numverts = b_mesh.vertices.length();
-		Attribute *attr = mesh->attributes.add(ATTR_STD_POINTINESS);
+		Attribute *attr = (subdivision? mesh->subd_attributes: mesh->attributes).add(ATTR_STD_POINTINESS);
 		float *data = attr->data_float();
 		int *counter = new int[numverts];
 		float *raw_data = new float[numverts];
@@ -625,7 +626,7 @@ static void create_mesh(Scene *scene,
 	}
 
 	/* Create needed vertex attributes. */
-	attr_create_pointiness(scene, mesh, b_mesh);
+	attr_create_pointiness(scene, mesh, b_mesh, subdivision);
 
 	/* create faces */
 	vector<int> nverts(numfaces);
@@ -716,13 +717,13 @@ static void create_subd_mesh(Scene *scene,
                              BL::Mesh& b_mesh,
                              PointerRNA *cmesh,
                              const vector<uint>& used_shaders,
-                             bool preview)
+                             float dicing_rate)
 {
 	mesh->subdivision_type = (Mesh::SubdivisionType)RNA_enum_get(cmesh, "subdivision_type");
 	create_mesh(scene, mesh, b_mesh, used_shaders, true);
 
 	SubdParams sdparams;
-	sdparams.dicing_rate = preview ? RNA_float_get(cmesh, "preview_dicing_rate") : RNA_float_get(cmesh, "dicing_rate");
+	sdparams.dicing_rate = max(0.1f, RNA_float_get(cmesh, "dicing_rate") * dicing_rate);
 	sdparams.max_level = RNA_int_get(cmesh, "max_subdivision_level");
 
 	scene->camera->update();
@@ -843,11 +844,8 @@ Mesh *BlenderSync::sync_mesh(BL::Object& b_ob,
 			if(render_layer.use_surfaces && !hide_tris) {
 				mesh->displacement_scale = RNA_float_get(&cmesh, "displacement_scale");
 
-				if(cmesh.data && is_cpu && experimental && RNA_enum_get(&cmesh, "subdivision_type") != 0 &&
-						(!preview || RNA_boolean_get(&cmesh, "preview_displacement")))
-				{
-					create_subd_mesh(scene, mesh, b_ob, b_mesh, &cmesh, used_shaders, preview);
-				}
+				if(cmesh.data && is_cpu && experimental && RNA_enum_get(&cmesh, "subdivision_type"))
+					create_subd_mesh(scene, mesh, b_ob, b_mesh, &cmesh, used_shaders, dicing_rate);
 				else
 					create_mesh(scene, mesh, b_mesh, used_shaders);
 

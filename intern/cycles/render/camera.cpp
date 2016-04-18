@@ -83,8 +83,8 @@ Camera::Camera()
 	nearclip = 1e-5f;
 	farclip = 1e5f;
 
-	width = 0;
-	height = 0;
+	width = 1024;
+	height = 512;
 	resolution = 1;
 
 	viewplane.left = -((float)width/(float)height);

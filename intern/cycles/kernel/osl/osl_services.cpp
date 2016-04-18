@@ -795,7 +795,7 @@ bool OSLRenderServices::get_attribute(ShaderData *sd, bool derivatives, ustring 
                                       TypeDesc type, ustring name, void *val)
 {
 	KernelGlobals *kg = sd->osl_globals;
-	bool is_curve;
+	int prim_type = 0;
 	int object;
 
 	/* lookup of attribute on another object */
@@ -806,18 +806,18 @@ bool OSLRenderServices::get_attribute(ShaderData *sd, bool derivatives, ustring 
 			return false;
 
 		object = it->second;
-		is_curve = false;
 	}
 	else {
 		object = sd->object;
-		is_curve = (sd->type & PRIMITIVE_ALL_CURVE) != 0;
+		prim_type |= (sd->type & PRIMITIVE_ALL_CURVE) != 0 ? ATTR_PRIM_CURVE : 0;
+		prim_type |= (sd->type & PRIMITIVE_CACHE_TRIANGLE) != 0 ? ATTR_PRIM_SUBD : 0;
 
 		if(object == OBJECT_NONE)
 			return get_background_attribute(kg, sd, name, type, derivatives, val);
 	}
 
 	/* find attribute on object */
-	object = object*ATTR_PRIM_TYPES + (is_curve == true);
+	object = object*ATTR_PRIM_TYPES + prim_type;
 	OSLGlobals::AttributeMap& attribute_map = kg->osl->attribute_map[object];
 	OSLGlobals::AttributeMap::iterator it = attribute_map.find(name);
 

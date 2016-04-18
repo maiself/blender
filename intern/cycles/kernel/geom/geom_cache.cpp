@@ -123,7 +123,7 @@ void geom_cache_clear(GeomCache* geom_cache) {
 	lru->clear();
 }
 
-void geom_cache_set_max_size(GeomCache * geom_cache, uint max_size) {
+void geom_cache_set_max_size(GeomCache * geom_cache, size_t max_size) {
 	if(!geom_cache)
 		return;
 

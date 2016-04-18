@@ -370,6 +370,19 @@ class CyclesRenderSettings(bpy.types.PropertyGroup):
                 min=2, max=65536
                 )
 
+        cls.dicing_rate = FloatProperty(
+                name="Dicing Rate",
+                description="Size of a micropolygon in pixels",
+                min=0.1, max=1000.0,
+                default=1.0,
+                )
+        cls.preview_dicing_rate = FloatProperty(
+                name="Preview Dicing Rate",
+                description="Size of a micropolygon in pixels during preview render",
+                min=0.1, max=1000.0,
+                default=8.0,
+                )
+
         cls.film_exposure = FloatProperty(
                 name="Exposure",
                 description="Image brightness scale",
@@ -501,7 +514,7 @@ class CyclesRenderSettings(bpy.types.PropertyGroup):
         cls.geom_cache_max_size = IntProperty(
                 name="Geometry Cache Size",
                 description="Maximum size of the geometry cache in MB",
-                min=128, max=1024*4,
+                min=128,
                 default=256,
                 )
 
@@ -957,7 +970,7 @@ class CyclesMeshSettings(bpy.types.PropertyGroup):
                 )
         cls.dicing_rate = FloatProperty(
                 name="Dicing Rate",
-                description="Size of a micropolygon in pixels",
+                description="Multiplier for scene dicing rate",
                 min=0.1, max=1000.0,
                 default=1.0,
                 )
