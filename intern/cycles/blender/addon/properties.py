@@ -383,6 +383,13 @@ class CyclesRenderSettings(bpy.types.PropertyGroup):
                 default=8.0,
                 )
 
+        cls.max_subdivisions = IntProperty(
+                name="Max Subdivisions",
+                description="Stop subdividing when this level is reached even if the dice rate would produce finer tessellation",
+                min=0, max=16,
+                default=12,
+                )
+
         cls.film_exposure = FloatProperty(
                 name="Exposure",
                 description="Image brightness scale",
@@ -973,23 +980,6 @@ class CyclesMeshSettings(bpy.types.PropertyGroup):
                 description="Multiplier for scene dicing rate",
                 min=0.1, max=1000.0,
                 default=1.0,
-                )
-        cls.preview_dicing_rate = FloatProperty(
-                name="Preview Dicing Rate",
-                description="Width of a micropolygon in pixels during preview render",
-                min=0.1, max=1000.0,
-                default=8.0,
-                )
-        cls.preview_displacement = BoolProperty(
-                name="Preview Displacement",
-                description="Use subdivision in preview render",
-                default=True,
-                )
-        cls.max_subdivision_level = IntProperty(
-                name="Max Subdivision Level",
-                description="",
-                min=0, max=16,
-                default=12,
                 )
 
     @classmethod

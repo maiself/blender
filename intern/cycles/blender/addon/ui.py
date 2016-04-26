@@ -235,6 +235,8 @@ class CyclesRender_PT_geometery(CyclesButtonsPanel, Panel):
             sub.label("Subdivision Rate:")
             sub.prop(cscene, "dicing_rate", text="Render")
             sub.prop(cscene, "preview_dicing_rate", text="Preview")
+            sub.separator()
+            sub.prop(cscene, "max_subdivisions")
         else:
             row = layout.row()
             row.label("Volume Sampling:")
@@ -718,8 +720,6 @@ class Cycles_PT_mesh_displacement(CyclesButtonsPanel, Panel):
 
         if cdata.subdivision_type != 'NONE':
             sub.prop(cdata, "dicing_rate")
-            sub.separator()
-            sub.prop(cdata, "max_subdivision_level")
 
 class CyclesObject_PT_motion_blur(CyclesButtonsPanel, Panel):
     bl_label = "Motion Blur"

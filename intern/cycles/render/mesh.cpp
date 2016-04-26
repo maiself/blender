@@ -568,7 +568,7 @@ void Mesh::compute_bvh(SceneParams *params, Progress *progress, int n, int total
 
 			delete bvh;
 			bvh = BVH::create(bparams, objects);
-			bvh->build(*progress);
+			MEM_GUARDED_CALL(progress, bvh->build, *progress);
 		}
 	}
 
@@ -1347,10 +1347,10 @@ void MeshManager::device_update_displacement_images(Device *device,
 
 void MeshManager::device_update(Device *device, DeviceScene *dscene, Scene *scene, Progress& progress)
 {
-	VLOG(1) << "Total " << scene->meshes.size() << " meshes.";
-
 	if(!need_update)
 		return;
+
+	VLOG(1) << "Total " << scene->meshes.size() << " meshes.";
 
 	GeomCache* geom_cache = device->get_geom_cache();
 	geom_cache_set_scene(geom_cache, scene);

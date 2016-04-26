@@ -329,7 +329,7 @@ static void create_mesh_volume_attribute(BL::Object& b_ob,
 	        is_float,
 	        is_linear,
 	        INTERPOLATION_LINEAR,
-	        EXTENSION_REPEAT,
+	        EXTENSION_CLIP,
 	        true);
 }
 
@@ -717,14 +717,15 @@ static void create_subd_mesh(Scene *scene,
                              BL::Mesh& b_mesh,
                              PointerRNA *cmesh,
                              const vector<uint>& used_shaders,
-                             float dicing_rate)
+                             float dicing_rate,
+                             int max_subdivisions)
 {
 	mesh->subdivision_type = (Mesh::SubdivisionType)RNA_enum_get(cmesh, "subdivision_type");
 	create_mesh(scene, mesh, b_mesh, used_shaders, true);
 
 	SubdParams sdparams;
 	sdparams.dicing_rate = max(0.1f, RNA_float_get(cmesh, "dicing_rate") * dicing_rate);
-	sdparams.max_level = RNA_int_get(cmesh, "max_subdivision_level");
+	sdparams.max_level = max_subdivisions;
 
 	scene->camera->update();
 	sdparams.camera = scene->camera;
@@ -845,7 +846,8 @@ Mesh *BlenderSync::sync_mesh(BL::Object& b_ob,
 				mesh->displacement_scale = RNA_float_get(&cmesh, "displacement_scale");
 
 				if(cmesh.data && is_cpu && experimental && RNA_enum_get(&cmesh, "subdivision_type"))
-					create_subd_mesh(scene, mesh, b_ob, b_mesh, &cmesh, used_shaders, dicing_rate);
+					create_subd_mesh(scene, mesh, b_ob, b_mesh, &cmesh, used_shaders,
+					                 dicing_rate, max_subdivisions);
 				else
 					create_mesh(scene, mesh, b_mesh, used_shaders);
 
