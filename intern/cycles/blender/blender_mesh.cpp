@@ -24,7 +24,6 @@
 #include "blender_session.h"
 #include "blender_util.h"
 
-#include "subd_mesh.h"
 #include "subd_patch.h"
 #include "subd_split.h"
 

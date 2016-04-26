@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#ifdef WITH_OPENSUBDIV
 /* TODO: Move the OpenSubdiv includes to a separate header. */
 #ifdef _MSC_VER
 #  include <iso646.h>
@@ -26,6 +27,7 @@
 #include <opensubdiv/far/patchTableFactory.h>
 #include <opensubdiv/far/patchMap.h>
 #include <opensubdiv/far/ptexIndices.h>
+#endif
 
 #include "bvh.h"
 #include "bvh_build.h"
@@ -51,9 +53,10 @@
 #include "../subd/subd_split.h"
 #include "../subd/subd_patch.h"
 
-using namespace OpenSubdiv;
-
 CCL_NAMESPACE_BEGIN
+
+#ifdef WITH_OPENSUBDIV
+using namespace OpenSubdiv;
 
 struct OsdVertex {
 	float3 v;
@@ -250,6 +253,7 @@ struct OsdPatch : Patch {
 	bool is_triangle() { return !mesh->patches[patch].is_quad(); }
 	BoundBox bound() { return BoundBox::empty; }
 };
+#endif
 
 static float3 patch_normal(Mesh* mesh, int patch) {
 	Mesh::Patch& t = mesh->patches[patch];
@@ -333,18 +337,23 @@ void Mesh::dice_subpatch(TessellatedSubPatch* diced, int subpatch_id)
 	diced->shader = reinterpret_cast<ShaderManager*>(NULL)->get_shader_id(patch.shader, this, true);
 	diced->smooth = patch.smooth;
 
+#ifdef WITH_OPENSUBDIV
 	OsdPatch osd_patch;
+#endif
 	LinearQuadPatch quad_patch;
 	LinearTrianglePatch tri_patch;
 	ccl::Patch* subd_patch;
 
+#ifdef WITH_OPENSUBDIV
 	if(subdivision_type == SUBDIVISION_CATMULL_CLARK) {
 		osd_patch.mesh = this;
 		osd_patch.patch = subpatches[subpatch_id].patch;
 
 		subd_patch = &osd_patch;
 	}
-	else {
+	else
+#endif
+	{
 		Attribute *attr_vN = attributes.find(ATTR_STD_VERTEX_NORMAL);
 		float3 *vN = attr_vN->data_float3();
 
@@ -431,12 +440,15 @@ void Mesh::dice_subpatch(TessellatedSubPatch* diced, int subpatch_id)
 
 void Mesh::split_patches(DiagSplit *split)
 {
+#ifdef WITH_OPENSUBDIV
 	update_osd();
+#endif
 
 	Attribute *attr_vN = attributes.find(ATTR_STD_VERTEX_NORMAL);
 	float3 *vN = attr_vN->data_float3();
 
 	for(int p = 0; p < patches.size(); p++) {
+#ifdef WITH_OPENSUBDIV
 		if(subdivision_type == SUBDIVISION_CATMULL_CLARK) {
 			OsdPatch patch;
 			patch.mesh = this;
@@ -447,7 +459,9 @@ void Mesh::split_patches(DiagSplit *split)
 			else 
 				split->split_triangle(&patch);
 		}
-		else {
+		else
+#endif
+		{
 			if(patches[p].is_quad()) {
 				LinearQuadPatch patch;
 

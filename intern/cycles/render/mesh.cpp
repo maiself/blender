@@ -116,13 +116,17 @@ Mesh::Mesh()
 	has_volume = false;
 	has_surface_bssrdf = false;
 
+#ifdef WITH_OPENSUBDIV
 	osd_data = NULL;
+#endif
 }
 
 Mesh::~Mesh()
 {
 	delete bvh;
+#ifdef WITH_OPENSUBDIV
 	free_osd_data();
+#endif
 }
 
 void Mesh::reserve(int numverts, int numtris, int numcurves, int numcurvekeys, int numpatches)
@@ -156,7 +160,9 @@ void Mesh::clear()
 
 	patches.clear();
 	subpatches.clear();
+#ifdef WITH_OPENSUBDIV
 	free_osd_data();
+#endif
 
 	attributes.clear();
 	curve_attributes.clear();
