@@ -115,13 +115,15 @@ void DiagSplit::partition_edge(Patch *patch, float2 *P, int *t0, int *t1, float2
 	}
 }
 
-static float2 right_to_equilateral(float2 P) {
+static float2 right_to_equilateral(float2 P)
+{
 	static const float2 A = make_float2(1.0f, 0.5f);
 	static const float2 B = make_float2(0.0f, sinf(M_PI_F/3.0f));
 	return make_float2(dot(P, A), dot(P, B));
 }
 
-static void limit_edge_factors(const TriangleDice::SubPatch& sub, TriangleDice::EdgeFactors& ef, int max_t) {
+static void limit_edge_factors(const TriangleDice::SubPatch& sub, TriangleDice::EdgeFactors& ef, int max_t)
+{
 	float2 Pu = sub.Pu;
 	float2 Pv = sub.Pv;
 	float2 Pw = sub.Pw;
@@ -141,7 +143,8 @@ static void limit_edge_factors(const TriangleDice::SubPatch& sub, TriangleDice::
 	ef.tw = tw <= 1 ? 1 : min(ef.tw, tw);
 }
 
-static void limit_edge_factors(const QuadDice::SubPatch& sub, QuadDice::EdgeFactors& ef, int max_t) {
+static void limit_edge_factors(const QuadDice::SubPatch& sub, QuadDice::EdgeFactors& ef, int max_t)
+{
 	float2 P00 = sub.P00;
 	float2 P01 = sub.P01;
 	float2 P10 = sub.P10;
@@ -187,11 +190,11 @@ void DiagSplit::split(TriangleDice::SubPatch& sub, TriangleDice::EdgeFactors& ef
 
 	switch(non_uniform_count) {
 		case 1: {
-			/* one edge is non-uniform, split into two triangles */
+			/* TODO(mai): one edge is non-uniform, split into two triangles */
 			// fallthru
 		}
 		case 2: {
-			/* two edges are non-uniform, split into triangle and quad */
+			/* TODO(mai): two edges are non-uniform, split into triangle and quad */
 			// fallthru
 		}
 		case 3: {

@@ -39,7 +39,9 @@ class Scene;
 class SceneParams;
 class AttributeRequest;
 class DiagSplit;
+#ifdef WITH_OPENSUBDIV
 class MeshOsdData;
+#endif
 
 /* Mesh */
 
@@ -141,7 +143,9 @@ public:
 
 	vector<Patch> patches;
 	vector<SubPatch> subpatches;
+#ifdef WITH_OPENSUBDIV
 	MeshOsdData* osd_data;
+#endif
 
 	vector<uint> used_shaders;
 	AttributeSet attributes;
@@ -215,8 +219,10 @@ public:
 	/* Check if the mesh should be treated as instanced. */
 	bool is_instanced() const;
 
+#ifdef WITH_OPENSUBDIV
 	void update_osd();
 	void free_osd_data();
+#endif
 
 	void split_patches(DiagSplit *split);
 	void diced_subpatch_size(int subpatch_id, uint* num_verts, uint* num_tris, int* total_size);

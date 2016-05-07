@@ -488,7 +488,14 @@ void TriangleDice::dice(SubPatch& sub, EdgeFactors& ef)
 	/* todo: handle 2 1 1 resolution */
 	int M = max(ef.tu, max(ef.tv, ef.tw));
 
-	float S = 0.7598356856515927f; /* (2*cos(30d)/3)**0.5 ; makes internal triangles more consistant with quad patches*/
+	/* Due to the "slant" of the edges of a triangle compared to a quad, the internal
+	 * triangles end up smaller, causing over-tessellation. This is to correct for this
+	 * difference in area. Technically its only correct for equilateral triangles, but
+	 * its better than how it was.
+	 *
+	 * (2*cos(radians(30))/3)**0.5
+	 */
+	float S = 0.7598356856515927f;
 	M = max((int)ceil(S*M), 1);
 
 	reserve(ef, M);
