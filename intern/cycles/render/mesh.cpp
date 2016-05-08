@@ -984,16 +984,13 @@ static void update_attribute_element_offset(Mesh *mesh,
 
 		/* mesh vertex/curve index is global, not per object, so we sneak
 		 * a correction for that in here */
-		if(prim == ATTR_PRIM_SUBD) {
-			/* subd requires no correction */
-		}
-		else if(element == ATTR_ELEMENT_VERTEX)
+		if(element == ATTR_ELEMENT_VERTEX)
 			offset -= mesh->vert_offset;
 		else if(element == ATTR_ELEMENT_VERTEX_MOTION)
 			offset -= mesh->vert_offset;
-		else if(element == ATTR_ELEMENT_FACE)
+		else if(element == ATTR_ELEMENT_FACE && prim != ATTR_PRIM_SUBD)
 			offset -= mesh->tri_offset;
-		else if(element == ATTR_ELEMENT_CORNER || element == ATTR_ELEMENT_CORNER_BYTE)
+		else if((element == ATTR_ELEMENT_CORNER || element == ATTR_ELEMENT_CORNER_BYTE) && prim != ATTR_PRIM_SUBD)
 			offset -= 3*mesh->tri_offset;
 		else if(element == ATTR_ELEMENT_CURVE)
 			offset -= mesh->curve_offset;
