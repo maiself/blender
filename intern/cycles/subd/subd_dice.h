@@ -48,7 +48,7 @@ struct SubdParams {
 		split_threshold = 1;
 		dicing_rate = 0.1f;
 		max_level = 12;
-		max_T = 128;
+		max_T = 12;
 		camera = NULL;
 		subpatch = NULL;
 	}
