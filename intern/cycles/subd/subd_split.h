@@ -42,7 +42,7 @@ public:
 
 	SubdParams params;
 
-	DiagSplit(const SubdParams& params);
+	explicit DiagSplit(const SubdParams& params);
 
 	float3 to_world(Patch *patch, float2 uv);
 	int T(Patch *patch, float2 Pstart, float2 Pend);

@@ -62,7 +62,7 @@ public:
 	size_t vert_offset;
 	size_t tri_offset;
 
-	EdgeDice(const SubdParams& params);
+	explicit EdgeDice(const SubdParams& params);
 
 	void reserve(int num_verts, int num_tris);
 
@@ -103,7 +103,7 @@ public:
 		int tv1;
 	};
 
-	QuadDice(const SubdParams& params);
+	explicit QuadDice(const SubdParams& params);
 
 	void diced_size(SubPatch& sub, EdgeFactors& ef, uint* num_verts, uint* num_tris);
 	void calc_size(EdgeFactors& ef, int Mu, int Mv, uint* num_verts, uint* num_tris);
@@ -159,7 +159,7 @@ public:
 		int tw;
 	};
 
-	TriangleDice(const SubdParams& params);
+	explicit TriangleDice(const SubdParams& params);
 
 	void diced_size(SubPatch& sub, EdgeFactors& ef, uint* num_verts, uint* num_tris);
 	void calc_size(EdgeFactors& ef, int M, uint* num_verts, uint* num_tris);

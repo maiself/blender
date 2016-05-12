@@ -135,8 +135,8 @@ public:
 	AttributeElement triangle_element, curve_element, subd_element;
 	int triangle_offset, curve_offset, subd_offset;
 
-	AttributeRequest(ustring name_);
-	AttributeRequest(AttributeStandard std);
+	explicit AttributeRequest(ustring name_);
+	explicit AttributeRequest(AttributeStandard std);
 };
 
 /* AttributeRequestSet

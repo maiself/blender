@@ -349,7 +349,10 @@ void ImageTextureNode::compile(OSLCompiler& compiler)
 	image_manager = compiler.image_manager;
 	if(is_float == -1) {
 		if(builtin_data == NULL) {
-			is_float = (int)image_manager->is_float_image(filename, NULL, is_linear);
+			ImageManager::ImageDataType type;
+			type = image_manager->get_image_metadata(filename, NULL, is_linear);
+			if(type == ImageManager::IMAGE_DATA_TYPE_FLOAT || type == ImageManager::IMAGE_DATA_TYPE_FLOAT4)
+				is_float = 1;
 		}
 		else {
 			bool is_float_bool;
@@ -533,7 +536,10 @@ void EnvironmentTextureNode::compile(OSLCompiler& compiler)
 	image_manager = compiler.image_manager;
 	if(is_float == -1) {
 		if(builtin_data == NULL) {
-			is_float = (int)image_manager->is_float_image(filename, NULL, is_linear);
+			ImageManager::ImageDataType type;
+			type = image_manager->get_image_metadata(filename, NULL, is_linear);
+			if(type == ImageManager::IMAGE_DATA_TYPE_FLOAT || type == ImageManager::IMAGE_DATA_TYPE_FLOAT4)
+				is_float = 1;
 		}
 		else {
 			bool is_float_bool;
@@ -3126,6 +3132,8 @@ void ColorNode::compile(OSLCompiler& compiler)
 AddClosureNode::AddClosureNode()
 : ShaderNode("add_closure")
 {
+	special_type = SHADER_SPECIAL_TYPE_COMBINE_CLOSURE;
+
 	add_input("Closure1", SHADER_SOCKET_CLOSURE);
 	add_input("Closure2", SHADER_SOCKET_CLOSURE);
 	add_output("Closure",  SHADER_SOCKET_CLOSURE);
@@ -3146,6 +3154,8 @@ void AddClosureNode::compile(OSLCompiler& compiler)
 MixClosureNode::MixClosureNode()
 : ShaderNode("mix_closure")
 {
+	special_type = SHADER_SPECIAL_TYPE_COMBINE_CLOSURE;
+
 	add_input("Fac", SHADER_SOCKET_FLOAT, 0.5f);
 	add_input("Closure1", SHADER_SOCKET_CLOSURE);
 	add_input("Closure2", SHADER_SOCKET_CLOSURE);
@@ -3963,6 +3973,8 @@ void BlackbodyNode::compile(OSLCompiler& compiler)
 OutputNode::OutputNode()
 : ShaderNode("output")
 {
+	special_type = SHADER_SPECIAL_TYPE_OUTPUT;
+
 	add_input("Surface", SHADER_SOCKET_CLOSURE);
 	add_input("Volume", SHADER_SOCKET_CLOSURE);
 	add_input("Displacement", SHADER_SOCKET_FLOAT);

@@ -81,6 +81,8 @@ enum ShaderNodeSpecialType {
 	SHADER_SPECIAL_TYPE_SCRIPT,
 	SHADER_SPECIAL_TYPE_IMAGE_SLOT,
 	SHADER_SPECIAL_TYPE_CLOSURE,
+	SHADER_SPECIAL_TYPE_COMBINE_CLOSURE,
+	SHADER_SPECIAL_TYPE_OUTPUT,
 	SHADER_SPECIAL_TYPE_BUMP,
 };
 
@@ -175,7 +177,7 @@ public:
 
 class ShaderNode {
 public:
-	ShaderNode(const char *name);
+	explicit ShaderNode(const char *name);
 	virtual ~ShaderNode();
 
 	ShaderInput *input(const char *name);
