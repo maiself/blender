@@ -522,7 +522,7 @@ class CyclesRenderSettings(bpy.types.PropertyGroup):
                 name="Geometry Cache Size",
                 description="Maximum size of the geometry cache in MB",
                 min=128,
-                default=256,
+                default=1024,
                 )
 
         cls.bake_type = EnumProperty(
