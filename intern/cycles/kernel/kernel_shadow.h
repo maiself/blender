@@ -183,7 +183,7 @@ ccl_device_inline bool shadow_blocked(KernelGlobals *kg, ShaderData *shadow_sd, 
 ccl_device_noinline bool shadow_blocked(KernelGlobals *kg,
                                         ShaderData *shadow_sd,
                                         ccl_addr_space PathState *state,
-                                        ccl_addr_space Ray *ray_input,
+                                        Ray *ray_input,
                                         float3 *shadow)
 {
 	*shadow = make_float3(1.0f, 1.0f, 1.0f);
@@ -214,7 +214,13 @@ ccl_device_noinline bool shadow_blocked(KernelGlobals *kg,
 			float3 Pend = ray->P + ray->D*ray->t;
 			int bounce = state->transparent_bounce;
 #ifdef __VOLUME__
-			PathState ps = *state;
+#  ifdef __SPLIT_KERNEL__
+			ccl_addr_space PathState *ps = &kg->state_shadow[SD_THREAD];
+#  else
+			PathState ps_object;
+			PathState *ps = &ps_object;
+#  endif
+			*ps = *state;
 #endif
 
 			for(;;) {
@@ -225,8 +231,8 @@ ccl_device_noinline bool shadow_blocked(KernelGlobals *kg,
 				{
 #ifdef __VOLUME__
 					/* attenuation for last line segment towards light */
-					if(ps.volume_stack[0].shader != SHADER_NONE)
-						kernel_volume_shadow(kg, shadow_sd, &ps, ray, &throughput);
+					if(ps->volume_stack[0].shader != SHADER_NONE)
+						kernel_volume_shadow(kg, shadow_sd, ps, ray, &throughput);
 #endif
 
 					*shadow *= throughput;
@@ -240,10 +246,10 @@ ccl_device_noinline bool shadow_blocked(KernelGlobals *kg,
 
 #ifdef __VOLUME__
 				/* attenuation between last surface and next surface */
-				if(ps.volume_stack[0].shader != SHADER_NONE) {
+				if(ps->volume_stack[0].shader != SHADER_NONE) {
 					Ray segment_ray = *ray;
 					segment_ray.t = isect->t;
-					kernel_volume_shadow(kg, shadow_sd, &ps, &segment_ray, &throughput);
+					kernel_volume_shadow(kg, shadow_sd, ps, &segment_ray, &throughput);
 				}
 #endif
 
@@ -272,7 +278,7 @@ ccl_device_noinline bool shadow_blocked(KernelGlobals *kg,
 
 #ifdef __VOLUME__
 				/* exit/enter volume */
-				kernel_volume_stack_enter_exit(kg, shadow_sd, ps.volume_stack);
+				kernel_volume_stack_enter_exit(kg, shadow_sd, ps->volume_stack);
 #endif
 
 				bounce++;

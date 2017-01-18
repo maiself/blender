@@ -14,16 +14,18 @@
  * limitations under the License.
  */
 
-#include "split/kernel_lamp_emission.h"
+#include "split/kernel_do_volume.h"
 
-__kernel void kernel_ocl_path_trace_lamp_emission(
+__kernel void kernel_ocl_path_trace_do_volume(
         ccl_global char *kg,
         ccl_constant KernelData *data,
-        ccl_global float3 *throughput_coop,    /* Required for lamp emission */
-        PathRadiance *PathRadiance_coop,       /* Required for lamp emission */
-        ccl_global Ray *Ray_coop,              /* Required for lamp emission */
-        ccl_global PathState *PathState_coop,  /* Required for lamp emission */
-        Intersection *Intersection_coop,       /* Required for lamp emission */
+        ccl_global char *sd,                   /* Output ShaderData structure to be filled */
+        ccl_global float3 *throughput_coop,    /* Required for volume */
+        PathRadiance *PathRadiance_coop,       /* Required for volume */
+        ccl_global Ray *Ray_coop,              /* Required for volume */
+        ccl_global PathState *PathState_coop,  /* Required for volume */
+        Intersection *Intersection_coop,       /* Required for volume */
+        ccl_global uint *rng_coop,             /* Required for rbsdf calculation */
         ccl_global char *ray_state,            /* Denotes the state of each ray */
         int sw, int sh,
         ccl_global int *Queue_data,            /* Memory for queues */
@@ -37,6 +39,10 @@ __kernel void kernel_ocl_path_trace_lamp_emission(
 	int x = get_global_id(0);
 	int y = get_global_id(1);
 
+	/* We will empty this queue in this kernel. */
+	if(get_global_id(0) == 0 && get_global_id(1) == 0) {
+		Queue_index[QUEUE_ACTIVE_AND_REGENERATED_RAYS] = 0;
+	}
 	/* Fetch use_queues_flag. */
 	ccl_local char local_use_queues_flag;
 	if(get_local_id(0) == 0 && get_local_id(1) == 0) {
@@ -51,7 +57,7 @@ __kernel void kernel_ocl_path_trace_lamp_emission(
 		                          QUEUE_ACTIVE_AND_REGENERATED_RAYS,
 		                          Queue_data,
 		                          queuesize,
-		                          0);
+		                          1);
 		if(ray_index == QUEUE_EMPTY_SLOT) {
 			return;
 		}
@@ -63,14 +69,19 @@ __kernel void kernel_ocl_path_trace_lamp_emission(
 		}
 	}
 
-	kernel_lamp_emission((KernelGlobals *)kg,
-	                     throughput_coop,
-	                     PathRadiance_coop,
-	                     Ray_coop,
-	                     PathState_coop,
-	                     Intersection_coop,
-	                     ray_state,
-	                     sw, sh,
-	                     use_queues_flag,
-	                     ray_index);
+#ifdef __VOLUME__
+	kernel_do_volume((KernelGlobals *)kg,
+			 (ShaderData *)sd,
+			 throughput_coop,
+			 PathRadiance_coop,
+			 Ray_coop,
+			 PathState_coop,
+			 Intersection_coop,
+			 rng_coop,
+			 ray_state,
+			 sw, sh,
+			 use_queues_flag,
+			 ray_index);
+#endif
+
 }

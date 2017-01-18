@@ -125,7 +125,7 @@ ccl_device float3 volume_phase_eval(const ShaderData *sd, const ShaderClosure *s
 {
 	kernel_assert(sc->type == CLOSURE_VOLUME_HENYEY_GREENSTEIN_ID);
 
-	return volume_henyey_greenstein_eval_phase(sc, sd->I, omega_in, pdf);
+	return volume_henyey_greenstein_eval_phase(sc, ccl_fetch(sd, I), omega_in, pdf);
 }
 
 ccl_device int volume_phase_sample(const ShaderData *sd, const ShaderClosure *sc, float randu,
@@ -135,7 +135,7 @@ ccl_device int volume_phase_sample(const ShaderData *sd, const ShaderClosure *sc
 
 	switch(sc->type) {
 		case CLOSURE_VOLUME_HENYEY_GREENSTEIN_ID:
-			label = volume_henyey_greenstein_sample(sc, sd->I, sd->dI.dx, sd->dI.dy, randu, randv, eval, omega_in, &domega_in->dx, &domega_in->dy, pdf);
+			label = volume_henyey_greenstein_sample(sc, ccl_fetch(sd, I), ccl_fetch(sd, dI).dx, ccl_fetch(sd, dI).dy, randu, randv, eval, omega_in, &domega_in->dx, &domega_in->dy, pdf);
 			break;
 		default:
 			*eval = make_float3(0.0f, 0.0f, 0.0f);

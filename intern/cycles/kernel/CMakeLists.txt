@@ -18,6 +18,7 @@ set(SRC
 	kernels/opencl/kernel_queue_enqueue.cl
 	kernels/opencl/kernel_scene_intersect.cl
 	kernels/opencl/kernel_lamp_emission.cl
+	kernels/opencl/kernel_do_volume.cl
 	kernels/opencl/kernel_background_buffer_update.cl
 	kernels/opencl/kernel_shader_eval.cl
 	kernels/opencl/kernel_holdout_emission_blurring_pathtermination_ao.cl
@@ -198,6 +199,7 @@ set(SRC_SPLIT_HEADERS
 	split/kernel_shadow_blocked.h
 	split/kernel_split_common.h
 	split/kernel_sum_all_radiance.h
+	split/kernel_do_volume.h
 )
 
 # CUDA module
@@ -363,6 +365,7 @@ delayed_install(${CMAKE_CURRENT_SOURCE_DIR} "kernels/opencl/kernel_data_init.cl"
 delayed_install(${CMAKE_CURRENT_SOURCE_DIR} "kernels/opencl/kernel_queue_enqueue.cl" ${CYCLES_INSTALL_PATH}/kernel/kernels/opencl)
 delayed_install(${CMAKE_CURRENT_SOURCE_DIR} "kernels/opencl/kernel_scene_intersect.cl" ${CYCLES_INSTALL_PATH}/kernel/kernels/opencl)
 delayed_install(${CMAKE_CURRENT_SOURCE_DIR} "kernels/opencl/kernel_lamp_emission.cl" ${CYCLES_INSTALL_PATH}/kernel/kernels/opencl)
+delayed_install(${CMAKE_CURRENT_SOURCE_DIR} "kernels/opencl/kernel_do_volume.cl" ${CYCLES_INSTALL_PATH}/kernel/kernels/opencl)
 delayed_install(${CMAKE_CURRENT_SOURCE_DIR} "kernels/opencl/kernel_background_buffer_update.cl" ${CYCLES_INSTALL_PATH}/kernel/kernels/opencl)
 delayed_install(${CMAKE_CURRENT_SOURCE_DIR} "kernels/opencl/kernel_shader_eval.cl" ${CYCLES_INSTALL_PATH}/kernel/kernels/opencl)
 delayed_install(${CMAKE_CURRENT_SOURCE_DIR} "kernels/opencl/kernel_holdout_emission_blurring_pathtermination_ao.cl" ${CYCLES_INSTALL_PATH}/kernel/kernels/opencl)

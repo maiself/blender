@@ -102,6 +102,7 @@ typedef ccl_addr_space struct KernelGlobals {
 #  ifdef __SPLIT_KERNEL__
 	ShaderData *sd_input;
 	Intersection *isect_shadow;
+	ccl_global PathState *state_shadow;
 #  endif
 } KernelGlobals;
 

@@ -29,6 +29,7 @@ __kernel void kernel_ocl_path_trace_data_init(
         ccl_global Ray *Ray_coop,                    /* Ray array to store Ray information for all rays */
         ccl_global PathState *PathState_coop,        /* PathState array to store PathState information for all rays */
         Intersection *Intersection_coop_shadow,
+        ccl_global PathState *state_shadow,
         ccl_global char *ray_state,                  /* Stores information on current state of a ray */
 
 #define KERNEL_TEX(type, ttype, name)                                   \
@@ -65,6 +66,7 @@ __kernel void kernel_ocl_path_trace_data_init(
 	                 Ray_coop,
 	                 PathState_coop,
 	                 Intersection_coop_shadow,
+	                 state_shadow,
 	                 ray_state,
 
 #define KERNEL_TEX(type, ttype, name) name,

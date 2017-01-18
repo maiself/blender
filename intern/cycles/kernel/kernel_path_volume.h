@@ -20,11 +20,11 @@ CCL_NAMESPACE_BEGIN
 
 ccl_device_inline void kernel_path_volume_connect_light(
         KernelGlobals *kg,
-        RNG *rng,
+        ccl_addr_space RNG *rng,
         ShaderData *sd,
         ShaderData *emission_sd,
         float3 throughput,
-        PathState *state,
+        ccl_addr_space PathState *state,
         PathRadiance *L)
 {
 #ifdef __EMISSION__
@@ -43,10 +43,10 @@ ccl_device_inline void kernel_path_volume_connect_light(
 
 	/* connect to light from given point where shader has been evaluated */
 #  ifdef __OBJECT_MOTION__
-	light_ray.time = sd->time;
+	light_ray.time = ccl_fetch(sd, time);
 #  endif
 
-	if(light_sample(kg, light_t, light_u, light_v, sd->time, sd->P, state->bounce, &ls))
+	if(light_sample(kg, light_t, light_u, light_v, ccl_fetch(sd, time), ccl_fetch(sd, P), state->bounce, &ls))
 	{
 		float terminate = path_state_rng_light_termination(kg, rng, state);
 		if(direct_emission(kg, sd, emission_sd, &ls, state, &light_ray, &L_light, &is_lamp, terminate)) {
@@ -59,7 +59,7 @@ ccl_device_inline void kernel_path_volume_connect_light(
 			}
 		}
 	}
-#endif
+#endif /* __EMISSION__ */
 }
 
 #ifdef __KERNEL_GPU__
@@ -67,8 +67,14 @@ ccl_device_noinline
 #else
 ccl_device
 #endif
-bool kernel_path_volume_bounce(KernelGlobals *kg, RNG *rng,
-	ShaderData *sd, float3 *throughput, PathState *state, PathRadiance *L, Ray *ray)
+bool kernel_path_volume_bounce(
+	KernelGlobals *kg,
+	ccl_addr_space RNG *rng,
+	ShaderData *sd,
+	ccl_addr_space float3 *throughput,
+	ccl_addr_space PathState *state,
+	PathRadiance *L,
+	ccl_addr_space Ray *ray)
 {
 	/* sample phase function */
 	float phase_pdf;
@@ -99,18 +105,19 @@ bool kernel_path_volume_bounce(KernelGlobals *kg, RNG *rng,
 	path_state_next(kg, state, label);
 
 	/* setup ray */
-	ray->P = sd->P;
+	ray->P = ccl_fetch(sd, P);
 	ray->D = phase_omega_in;
 	ray->t = FLT_MAX;
 
 #ifdef __RAY_DIFFERENTIALS__
-	ray->dP = sd->dP;
+	ray->dP = ccl_fetch(sd, dP);
 	ray->dD = phase_domega_in;
 #endif
 
 	return true;
 }
 
+#ifdef __BRANCHED_PATH__
 ccl_device void kernel_branched_path_volume_connect_light(KernelGlobals *kg, RNG *rng,
 	ShaderData *sd, ShaderData *emission_sd, float3 throughput, PathState *state, PathRadiance *L,
 	bool sample_all_lights, Ray *ray, const VolumeSegment *segment)
@@ -124,7 +131,7 @@ ccl_device void kernel_branched_path_volume_connect_light(KernelGlobals *kg, RNG
 	bool is_lamp;
 
 #  ifdef __OBJECT_MOTION__
-	light_ray.time = sd->time;
+	light_ray.time = ccl_fetch(sd, time);
 #  endif
 
 	if(sample_all_lights) {
@@ -261,10 +268,11 @@ ccl_device void kernel_branched_path_volume_connect_light(KernelGlobals *kg, RNG
 			}
 		}
 	}
-#endif
+#endif /* __EMISSION__ */
 }
+#endif /* __BRANCHED_PATH__ */
 
-#endif
+#endif /* __VOLUME_SCATTER__ */
 
 CCL_NAMESPACE_END
 

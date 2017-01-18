@@ -414,45 +414,45 @@ ccl_device_inline void shader_setup_from_background(KernelGlobals *kg, ShaderDat
 ccl_device_inline void shader_setup_from_volume(KernelGlobals *kg, ShaderData *sd, const Ray *ray)
 {
 	/* vectors */
-	sd->P = ray->P;
-	sd->N = -ray->D;  
-	sd->Ng = -ray->D;
-	sd->I = -ray->D;
-	sd->shader = SHADER_NONE;
-	sd->flag = 0;
+	ccl_fetch(sd, P) = ray->P;
+	ccl_fetch(sd, N) = -ray->D;
+	ccl_fetch(sd, Ng) = -ray->D;
+	ccl_fetch(sd, I) = -ray->D;
+	ccl_fetch(sd, shader) = SHADER_NONE;
+	ccl_fetch(sd, flag) = 0;
 #ifdef __OBJECT_MOTION__
-	sd->time = ray->time;
+	ccl_fetch(sd, time) = ray->time;
 #endif
-	sd->ray_length = 0.0f; /* todo: can we set this to some useful value? */
+	ccl_fetch(sd, ray_length) = 0.0f; /* todo: can we set this to some useful value? */
 
 #ifdef __INSTANCING__
-	sd->object = PRIM_NONE; /* todo: fill this for texture coordinates */
+	ccl_fetch(sd, object) = PRIM_NONE; /* todo: fill this for texture coordinates */
 #endif
-	sd->prim = PRIM_NONE;
-	sd->type = PRIMITIVE_NONE;
+	ccl_fetch(sd, prim) = PRIM_NONE;
+	ccl_fetch(sd, type) = PRIMITIVE_NONE;
 
 #ifdef __UV__
-	sd->u = 0.0f;
-	sd->v = 0.0f;
+	ccl_fetch(sd, u) = 0.0f;
+	ccl_fetch(sd, v) = 0.0f;
 #endif
 
 #ifdef __DPDU__
 	/* dPdu/dPdv */
-	sd->dPdu = make_float3(0.0f, 0.0f, 0.0f);
-	sd->dPdv = make_float3(0.0f, 0.0f, 0.0f);
+	ccl_fetch(sd, dPdu) = make_float3(0.0f, 0.0f, 0.0f);
+	ccl_fetch(sd, dPdv) = make_float3(0.0f, 0.0f, 0.0f);
 #endif
 
 #ifdef __RAY_DIFFERENTIALS__
 	/* differentials */
-	sd->dP = ray->dD;
-	differential_incoming(&sd->dI, sd->dP);
-	sd->du = differential_zero();
-	sd->dv = differential_zero();
+	ccl_fetch(sd, dP) = ray->dD;
+	differential_incoming(&ccl_fetch(sd, dI), ccl_fetch(sd, dP));
+	ccl_fetch(sd, du) = differential_zero();
+	ccl_fetch(sd, dv) = differential_zero();
 #endif
 
 	/* for NDC coordinates */
-	sd->ray_P = ray->P;
-	sd->ray_dP = ray->dP;
+	ccl_fetch(sd, ray_P) = ray->P;
+	ccl_fetch(sd, ray_dP) = ray->dP;
 }
 #endif
 
@@ -462,11 +462,11 @@ ccl_device_inline void shader_setup_from_volume(KernelGlobals *kg, ShaderData *s
 ccl_device_inline void shader_merge_closures(ShaderData *sd)
 {
 	/* merge identical closures, better when we sample a single closure at a time */
-	for(int i = 0; i < sd->num_closure; i++) {
-		ShaderClosure *sci = &sd->closure[i];
+	for(int i = 0; i < ccl_fetch(sd, num_closure); i++) {
+		ShaderClosure *sci = &ccl_fetch(sd, closure)[i];
 
-		for(int j = i + 1; j < sd->num_closure; j++) {
-			ShaderClosure *scj = &sd->closure[j];
+		for(int j = i + 1; j < ccl_fetch(sd, num_closure); j++) {
+			ShaderClosure *scj = &ccl_fetch(sd, closure)[j];
 
 			if(sci->type != scj->type)
 				continue;
@@ -476,15 +476,15 @@ ccl_device_inline void shader_merge_closures(ShaderData *sd)
 			sci->weight += scj->weight;
 			sci->sample_weight += scj->sample_weight;
 
-			int size = sd->num_closure - (j+1);
+			int size = ccl_fetch(sd, num_closure) - (j+1);
 			if(size > 0) {
 				for(int k = 0; k < size; k++) {
 					scj[k] = scj[k+1];
 				}
 			}
 
-			sd->num_closure--;
-			kernel_assert(sd->num_closure >= 0);
+			ccl_fetch(sd, num_closure)--;
+			kernel_assert(ccl_fetch(sd, num_closure) >= 0);
 			j--;
 		}
 	}
@@ -914,11 +914,11 @@ ccl_device float3 shader_eval_background(KernelGlobals *kg, ShaderData *sd,
 ccl_device_inline void _shader_volume_phase_multi_eval(const ShaderData *sd, const float3 omega_in, float *pdf,
 	int skip_phase, BsdfEval *result_eval, float sum_pdf, float sum_sample_weight)
 {
-	for(int i = 0; i < sd->num_closure; i++) {
+	for(int i = 0; i < ccl_fetch(sd, num_closure); i++) {
 		if(i == skip_phase)
 			continue;
 
-		const ShaderClosure *sc = &sd->closure[i];
+		const ShaderClosure *sc = &ccl_fetch(sd, closure)[i];
 
 		if(CLOSURE_IS_PHASE(sc->type)) {
 			float phase_pdf = 0.0f;
@@ -950,22 +950,22 @@ ccl_device int shader_volume_phase_sample(KernelGlobals *kg, const ShaderData *s
 {
 	int sampled = 0;
 
-	if(sd->num_closure > 1) {
+	if(ccl_fetch(sd, num_closure) > 1) {
 		/* pick a phase closure based on sample weights */
 		float sum = 0.0f;
 
-		for(sampled = 0; sampled < sd->num_closure; sampled++) {
-			const ShaderClosure *sc = &sd->closure[sampled];
+		for(sampled = 0; sampled < ccl_fetch(sd, num_closure); sampled++) {
+		  const ShaderClosure *sc = &ccl_fetch(sd, closure)[sampled];
 			
 			if(CLOSURE_IS_PHASE(sc->type))
 				sum += sc->sample_weight;
 		}
 
-		float r = sd->randb_closure*sum;
+		float r = ccl_fetch(sd, randb_closure)*sum;
 		sum = 0.0f;
 
-		for(sampled = 0; sampled < sd->num_closure; sampled++) {
-			const ShaderClosure *sc = &sd->closure[sampled];
+		for(sampled = 0; sampled < ccl_fetch(sd, num_closure); sampled++) {
+			const ShaderClosure *sc = &ccl_fetch(sd, closure)[sampled];
 			
 			if(CLOSURE_IS_PHASE(sc->type)) {
 				sum += sc->sample_weight;
@@ -975,7 +975,7 @@ ccl_device int shader_volume_phase_sample(KernelGlobals *kg, const ShaderData *s
 			}
 		}
 
-		if(sampled == sd->num_closure) {
+		if(sampled == ccl_fetch(sd, num_closure)) {
 			*pdf = 0.0f;
 			return LABEL_NONE;
 		}
@@ -983,7 +983,7 @@ ccl_device int shader_volume_phase_sample(KernelGlobals *kg, const ShaderData *s
 
 	/* todo: this isn't quite correct, we don't weight anisotropy properly
 	 * depending on color channels, even if this is perhaps not a common case */
-	const ShaderClosure *sc = &sd->closure[sampled];
+	const ShaderClosure *sc = &ccl_fetch(sd, closure)[sampled];
 	int label;
 	float3 eval;
 
@@ -1017,33 +1017,33 @@ ccl_device int shader_phase_sample_closure(KernelGlobals *kg, const ShaderData *
 
 ccl_device_inline void shader_eval_volume(KernelGlobals *kg,
                                           ShaderData *sd,
-                                          PathState *state,
-                                          VolumeStack *stack,
+                                          ccl_addr_space PathState *state,
+                                          ccl_addr_space VolumeStack *stack,
                                           int path_flag,
                                           ShaderContext ctx)
 {
 	/* reset closures once at the start, we will be accumulating the closures
 	 * for all volumes in the stack into a single array of closures */
-	sd->num_closure = 0;
-	sd->num_closure_extra = 0;
-	sd->flag = 0;
+	ccl_fetch(sd, num_closure) = 0;
+	ccl_fetch(sd, num_closure_extra) = 0;
+	ccl_fetch(sd, flag) = 0;
 
 	for(int i = 0; stack[i].shader != SHADER_NONE; i++) {
 		/* setup shaderdata from stack. it's mostly setup already in
 		 * shader_setup_from_volume, this switching should be quick */
-		sd->object = stack[i].object;
-		sd->shader = stack[i].shader;
+		ccl_fetch(sd, object) = stack[i].object;
+		ccl_fetch(sd, shader) = stack[i].shader;
 
-		sd->flag &= ~(SD_SHADER_FLAGS|SD_OBJECT_FLAGS);
-		sd->flag |= kernel_tex_fetch(__shader_flag, (sd->shader & SHADER_MASK)*SHADER_SIZE);
+		ccl_fetch(sd, flag) &= ~(SD_SHADER_FLAGS|SD_OBJECT_FLAGS);
+		ccl_fetch(sd, flag) |= kernel_tex_fetch(__shader_flag, (ccl_fetch(sd, shader) & SHADER_MASK)*SHADER_SIZE);
 
-		if(sd->object != OBJECT_NONE) {
-			sd->flag |= kernel_tex_fetch(__object_flag, sd->object);
+		if(ccl_fetch(sd, object) != OBJECT_NONE) {
+			ccl_fetch(sd, flag) |= kernel_tex_fetch(__object_flag, ccl_fetch(sd, object));
 
 #ifdef __OBJECT_MOTION__
 			/* todo: this is inefficient for motion blur, we should be
 			 * caching matrices instead of recomputing them each step */
-			shader_setup_object_transforms(kg, sd, sd->time);
+			shader_setup_object_transforms(kg, sd, ccl_fetch(sd, time));
 #endif
 		}
 

@@ -70,10 +70,12 @@ __kernel void kernel_ocl_path_trace_queue_enqueue(
 
 	int queue_number = -1;
 
-	if(IS_STATE(ray_state, ray_index, RAY_HIT_BACKGROUND)) {
+	if(IS_STATE(ray_state, ray_index, RAY_HIT_BACKGROUND) ||
+	   IS_STATE(ray_state, ray_index, RAY_UPDATE_BUFFER)) {
 		queue_number = QUEUE_HITBG_BUFF_UPDATE_TOREGEN_RAYS;
 	}
-	else if(IS_STATE(ray_state, ray_index, RAY_ACTIVE)) {
+	else if(IS_STATE(ray_state, ray_index, RAY_ACTIVE) ||
+		IS_STATE(ray_state, ray_index, RAY_REGENERATED)) {
 		queue_number = QUEUE_ACTIVE_AND_REGENERATED_RAYS;
 	}
 

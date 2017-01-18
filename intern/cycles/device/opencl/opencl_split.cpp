@@ -92,6 +92,7 @@ public:
 	OpenCLProgram program_data_init;
 	OpenCLProgram program_scene_intersect;
 	OpenCLProgram program_lamp_emission;
+	OpenCLProgram program_do_volume;
 	OpenCLProgram program_queue_enqueue;
 	OpenCLProgram program_background_buffer_update;
 	OpenCLProgram program_shader_eval;
@@ -129,6 +130,7 @@ public:
 	cl_mem AOBSDF_coop;
 	cl_mem AOLightRay_coop;
 	cl_mem Intersection_coop_shadow;
+	cl_mem state_shadow;
 
 #ifdef WITH_CYCLES_DEBUG
 	/* DebugData memory */
@@ -207,6 +209,7 @@ public:
 		ISLamp_coop = NULL;
 		LightRay_coop = NULL;
 		Intersection_coop_shadow = NULL;
+		state_shadow = NULL;
 
 #ifdef WITH_CYCLES_DEBUG
 		debugdata_coop = NULL;
@@ -289,6 +292,7 @@ public:
 #undef KERNEL_TEX
 			void *sd_input;
 			void *isect_shadow;
+			void *state_shadow;
 		} KernelGlobals;
 
 		return sizeof(KernelGlobals);
@@ -326,6 +330,7 @@ public:
 		LOAD_KERNEL(data_init);
 		LOAD_KERNEL(scene_intersect);
 		LOAD_KERNEL(lamp_emission);
+		LOAD_KERNEL(do_volume);
 		LOAD_KERNEL(queue_enqueue);
 		LOAD_KERNEL(background_buffer_update);
 		LOAD_KERNEL(shader_eval);
@@ -349,6 +354,7 @@ public:
 		program_data_init.release();
 		program_scene_intersect.release();
 		program_lamp_emission.release();
+		program_do_volume.release();
 		program_queue_enqueue.release();
 		program_background_buffer_update.release();
 		program_shader_eval.release();
@@ -377,6 +383,7 @@ public:
 		release_mem_object_safe(ISLamp_coop);
 		release_mem_object_safe(LightRay_coop);
 		release_mem_object_safe(Intersection_coop_shadow);
+		release_mem_object_safe(state_shadow);
 #ifdef WITH_CYCLES_DEBUG
 		release_mem_object_safe(debugdata_coop);
 #endif
@@ -503,6 +510,7 @@ public:
 			ISLamp_coop = mem_alloc(num_global_elements * sizeof(int));
 			LightRay_coop = mem_alloc(num_global_elements * sizeof(Ray));
 			Intersection_coop_shadow = mem_alloc(2 * num_global_elements * sizeof(Intersection));
+			state_shadow = mem_alloc(num_global_elements * sizeof(PathState));
 
 #ifdef WITH_CYCLES_DEBUG
 			debugdata_coop = mem_alloc(num_global_elements * sizeof(DebugData));
@@ -536,6 +544,7 @@ public:
 			                Ray_coop,
 			                PathState_coop,
 			                Intersection_coop_shadow,
+			                state_shadow,
 			                ray_state);
 
 /* TODO(sergey): Avoid map lookup here. */
@@ -600,6 +609,26 @@ public:
 		                Ray_coop,
 		                PathState_coop,
 		                Intersection_coop,
+		                ray_state,
+		                d_w,
+		                d_h,
+		                Queue_data,
+		                Queue_index,
+		                dQueue_size,
+		                use_queues_flag,
+		                num_parallel_samples);
+
+		kernel_set_args(program_do_volume(),
+		                0,
+		                kgbuffer,
+		                d_data,
+		                sd,
+		                throughput_coop,
+		                PathRadiance_coop,
+		                Ray_coop,
+		                PathState_coop,
+		                Intersection_coop,
+		                rng_coop,
 		                ray_state,
 		                d_w,
 		                d_h,
@@ -801,6 +830,7 @@ public:
 			for(int PathIter = 0; PathIter < PathIteration_times; PathIter++) {
 				ENQUEUE_SPLIT_KERNEL(scene_intersect, global_size, local_size);
 				ENQUEUE_SPLIT_KERNEL(lamp_emission, global_size, local_size);
+				ENQUEUE_SPLIT_KERNEL(do_volume, global_size, local_size);
 				ENQUEUE_SPLIT_KERNEL(queue_enqueue, global_size, local_size);
 				ENQUEUE_SPLIT_KERNEL(background_buffer_update, global_size, local_size);
 				ENQUEUE_SPLIT_KERNEL(shader_eval, global_size, local_size);
@@ -998,6 +1028,7 @@ public:
 			+ sizeof(float3)          /* AOBSDF size */
 			+ sizeof(Ray)
 			+ (sizeof(int) * NUM_QUEUES)
+			+ sizeof(PathState)       /* state_shadow size */
 			+ per_thread_output_buffer_size;
 		return retval;
 	}

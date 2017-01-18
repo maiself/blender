@@ -63,6 +63,7 @@ ccl_device void kernel_data_init(
         ccl_global Ray *Ray_coop,                    /* Ray array to store Ray information for all rays */
         ccl_global PathState *PathState_coop,        /* PathState array to store PathState information for all rays */
         Intersection *Intersection_coop_shadow,
+        ccl_global PathState *state_shadow,
         ccl_global char *ray_state,                  /* Stores information on current state of a ray */
 
 #define KERNEL_TEX(type, ttype, name)                                   \
@@ -90,6 +91,7 @@ ccl_device void kernel_data_init(
 	kg->data = data;
 	kg->sd_input = sd_DL_shadow;
 	kg->isect_shadow = Intersection_coop_shadow;
+	kg->state_shadow = state_shadow;
 #define KERNEL_TEX(type, ttype, name) \
 	kg->name = name;
 #include "../kernel_textures.h"
