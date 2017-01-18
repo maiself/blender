@@ -46,7 +46,7 @@ ccl_device void kernel_do_volume(
         PathRadiance *PathRadiance_coop,       /* Required for volume */
         ccl_global Ray *Ray_coop,              /* Required for volume */
         ccl_global PathState *PathState_coop,  /* Required for volume */
-        Intersection *Intersection_coop,       /* Required for volume */
+        ccl_global Intersection *Intersection_coop,       /* Required for volume */
         ccl_global uint *rng_coop,             /* Required for volume */
         ccl_global char *ray_state,            /* Denotes the state of each ray */
         int sw, int sh,
@@ -66,7 +66,7 @@ ccl_device void kernel_do_volume(
 		ccl_global float3 *throughput = &throughput_coop[ray_index];
 		ccl_global Ray *ray = &Ray_coop[ray_index];
 		ccl_global uint *rng = &rng_coop[ray_index];
-		Intersection *isect = &Intersection_coop[ray_index];
+		ccl_global Intersection *isect = &Intersection_coop[ray_index];
 
 		/* Sanitize volume stack. */
 		if(!hit) {
@@ -87,7 +87,7 @@ ccl_device void kernel_do_volume(
 #  ifdef __VOLUME_SCATTER__
 				if(result == VOLUME_PATH_SCATTERED) {
 					/* direct lighting */
-					kernel_path_volume_connect_light(kg, rng, sd, kg->sd_input, *throughput, state, L);
+					kernel_path_volume_connect_light(kg, rng, sd, SD_REF(kg->sd_input, SD_THREAD), *throughput, state, L);
 
 					/* indirect light bounce */
 					if(kernel_path_volume_bounce(kg, rng, sd, throughput, state, L, ray))

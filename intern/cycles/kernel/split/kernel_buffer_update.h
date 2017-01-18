@@ -32,30 +32,30 @@
  *
  * The input and output are as follows,
  *
- * rng_coop ---------------------------------------------|--- kernel_background_buffer_update --|--- PathRadiance_coop
- * throughput_coop --------------------------------------|                                      |--- L_transparent_coop
- * per_sample_output_buffers ----------------------------|                                      |--- per_sample_output_buffers
- * Ray_coop ---------------------------------------------|                                      |--- ray_state
- * PathState_coop ---------------------------------------|                                      |--- Queue_data (QUEUE_HITBG_BUFF_UPDATE_TOREGEN_RAYS)
- * L_transparent_coop -----------------------------------|                                      |--- Queue_data (QUEUE_ACTIVE_AND_REGENERATED_RAYS)
- * ray_state --------------------------------------------|                                      |--- Queue_index (QUEUE_HITBG_BUFF_UPDATE_TOREGEN_RAYS)
- * Queue_data (QUEUE_HITBG_BUFF_UPDATE_TOREGEN_RAYS) ----|                                      |--- Queue_index (QUEUE_ACTIVE_AND_REGENERATED_RAYS)
- * Queue_index (QUEUE_ACTIVE_AND_REGENERATED_RAYS) ------|                                      |--- work_array
- * parallel_samples -------------------------------------|                                      |--- PathState_coop
- * end_sample -------------------------------------------|                                      |--- throughput_coop
- * kg (globals) -----------------------------------------|                                      |--- rng_coop
- * rng_state --------------------------------------------|                                      |--- Ray
- * PathRadiance_coop ------------------------------------|                                      |
- * sw ---------------------------------------------------|                                      |
- * sh ---------------------------------------------------|                                      |
- * sx ---------------------------------------------------|                                      |
- * sy ---------------------------------------------------|                                      |
- * stride -----------------------------------------------|                                      |
- * work_array -------------------------------------------|                                      |--- work_array
- * queuesize --------------------------------------------|                                      |
- * start_sample -----------------------------------------|                                      |--- work_pool_wgs
- * work_pool_wgs ----------------------------------------|                                      |
- * num_samples ------------------------------------------|                                      |
+ * rng_coop ---------------------------------------------|--- kernel_buffer_update --|--- PathRadiance_coop
+ * throughput_coop --------------------------------------|                           |--- L_transparent_coop
+ * per_sample_output_buffers ----------------------------|                           |--- per_sample_output_buffers
+ * Ray_coop ---------------------------------------------|                           |--- ray_state
+ * PathState_coop ---------------------------------------|                           |--- Queue_data (QUEUE_HITBG_BUFF_UPDATE_TOREGEN_RAYS)
+ * L_transparent_coop -----------------------------------|                           |--- Queue_data (QUEUE_ACTIVE_AND_REGENERATED_RAYS)
+ * ray_state --------------------------------------------|                           |--- Queue_index (QUEUE_HITBG_BUFF_UPDATE_TOREGEN_RAYS)
+ * Queue_data (QUEUE_HITBG_BUFF_UPDATE_TOREGEN_RAYS) ----|                           |--- Queue_index (QUEUE_ACTIVE_AND_REGENERATED_RAYS)
+ * Queue_index (QUEUE_ACTIVE_AND_REGENERATED_RAYS) ------|                           |--- work_array
+ * parallel_samples -------------------------------------|                           |--- PathState_coop
+ * end_sample -------------------------------------------|                           |--- throughput_coop
+ * kg (globals) -----------------------------------------|                           |--- rng_coop
+ * rng_state --------------------------------------------|                           |--- Ray
+ * PathRadiance_coop ------------------------------------|                           |
+ * sw ---------------------------------------------------|                           |
+ * sh ---------------------------------------------------|                           |
+ * sx ---------------------------------------------------|                           |
+ * sy ---------------------------------------------------|                           |
+ * stride -----------------------------------------------|                           |
+ * work_array -------------------------------------------|                           |--- work_array
+ * queuesize --------------------------------------------|                           |
+ * start_sample -----------------------------------------|                           |--- work_pool_wgs
+ * work_pool_wgs ----------------------------------------|                           |
+ * num_samples ------------------------------------------|                           |
  *
  * note on sd : sd argument is neither an input nor an output for this kernel. It is just filled and consumed here itself.
  * Note on Queues :
@@ -64,12 +64,12 @@
  * State of queues when this kernel is called :
  * At entry,
  * QUEUE_ACTIVE_AND_REGENERATED_RAYS will be filled with RAY_ACTIVE rays
- * QUEUE_HITBG_BUFF_UPDATE_TOREGEN_RAYS will be filled with RAY_UPDATE_BUFFER, RAY_HIT_BACKGROUND, RAY_TO_REGENERATE rays
+ * QUEUE_HITBG_BUFF_UPDATE_TOREGEN_RAYS will be filled with RAY_UPDATE_BUFFER, RAY_TO_REGENERATE rays
  * At exit,
  * QUEUE_ACTIVE_AND_REGENERATED_RAYS will be filled with RAY_ACTIVE and RAY_REGENERATED rays
  * QUEUE_HITBG_BUFF_UPDATE_TOREGEN_RAYS will be empty
  */
-ccl_device char kernel_background_buffer_update(
+ccl_device char kernel_buffer_update(
         KernelGlobals *kg,
         ccl_global float *per_sample_output_buffers,
         ccl_global uint *rng_state,
@@ -79,6 +79,7 @@ ccl_device char kernel_background_buffer_update(
         ccl_global Ray *Ray_coop,              /* Required for background hit processing */
         ccl_global PathState *PathState_coop,  /* Required for background hit processing */
         ccl_global float *L_transparent_coop,  /* Required for background hit processing and buffer Update */
+        ccl_global SubsurfaceIndirectRays *SSS_coop,     /* Required for radiance update - direct lighting */
         ccl_global char *ray_state,            /* Stores information on the current state of a ray */
         int sw, int sh, int sx, int sy, int stride,
         int rng_state_offset_x,
@@ -144,26 +145,6 @@ ccl_device char kernel_background_buffer_update(
 	rng_state += (rng_state_offset_x + tile_x) + (rng_state_offset_y + tile_y) * rng_state_stride;
 	per_sample_output_buffers += (((tile_x + (tile_y * stride)) * parallel_samples) + my_sample_tile) * kernel_data.film.pass_stride;
 
-	if(IS_STATE(ray_state, ray_index, RAY_HIT_BACKGROUND)) {
-		/* eval background shader if nothing hit */
-		if(kernel_data.background.transparent && (state->flag & PATH_RAY_CAMERA)) {
-			*L_transparent = (*L_transparent) + average((*throughput));
-#ifdef __PASSES__
-			if(!(kernel_data.film.pass_flag & PASS_BACKGROUND))
-#endif
-				ASSIGN_RAY_STATE(ray_state, ray_index, RAY_UPDATE_BUFFER);
-		}
-
-		if(IS_STATE(ray_state, ray_index, RAY_HIT_BACKGROUND)) {
-#ifdef __BACKGROUND__
-			/* sample background shader */
-			float3 L_background = indirect_background(kg, kg->sd_input, state, ray);
-			path_radiance_accum_background(L, (*throughput), L_background, state->bounce);
-#endif
-			ASSIGN_RAY_STATE(ray_state, ray_index, RAY_UPDATE_BUFFER);
-		}
-	}
-
 	if(IS_STATE(ray_state, ray_index, RAY_UPDATE_BUFFER)) {
 		float3 L_sum = path_radiance_clamp_and_sum(kg, L);
 		kernel_write_light_passes(kg, per_sample_output_buffers, L, sample);
@@ -226,7 +207,10 @@ ccl_device char kernel_background_buffer_update(
 				*throughput = make_float3(1.0f, 1.0f, 1.0f);
 				*L_transparent = 0.0f;
 				path_radiance_init(L, kernel_data.film.use_light_pass);
-				path_state_init(kg, kg->sd_input, state, rng, sample, ray);
+				path_state_init(kg, SD_REF(kg->sd_input, SD_THREAD), state, rng, sample, ray);
+#ifdef __SUBSURFACE__
+				kernel_path_subsurface_init_indirect(&SSS_coop[ray_index]);
+#endif
 #ifdef __KERNEL_DEBUG__
 				debug_data_init(debug_data);
 #endif

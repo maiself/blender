@@ -116,6 +116,7 @@ CCL_NAMESPACE_BEGIN
 #    define __KERNEL_ADV_SHADING__
 #    define __VOLUME__
 #    define __VOLUME_SCATTER__
+#    define __SUBSURFACE__
 #  endif  /* __KERNEL_OPENCL_AMD__ */
 
 #  ifdef __KERNEL_OPENCL_INTEL_CPU__
@@ -537,7 +538,7 @@ typedef struct Ray {
 
 /* Intersection */
 
-typedef ccl_addr_space struct Intersection {
+typedef struct Intersection {
 	float t, u, v;
 	int prim;
 	int object;
@@ -747,11 +748,13 @@ enum ShaderDataFlag {
 #  define SD_THREAD (get_global_id(1) * get_global_size(0) + get_global_id(0))
 #  if !defined(__SPLIT_KERNEL_SOA__)
      /* ShaderData is stored as an Array-of-Structures */
+#    define SD_REF(s, ray_index) (&((s)[ray_index]))
 #    define ccl_soa_member(type, name) type soa_##name
-#    define ccl_fetch(s, t) (s[SD_THREAD].soa_##t)
-#    define ccl_fetch_array(s, t, index) (&s[SD_THREAD].soa_##t[index])
+#    define ccl_fetch(s, t) (s->soa_##t)
+#    define ccl_fetch_array(s, t, index) (&s->soa_##t[index])
 #  else
      /* ShaderData is stored as an Structure-of-Arrays */
+#    define SD_REF(s, ray_index) (s)
 #    define SD_GLOBAL_SIZE (get_global_size(0) * get_global_size(1))
 #    define SD_FIELD_SIZE(t) sizeof(((struct ShaderData*)0)->t)
 #    define SD_OFFSETOF(t) ((char*)(&((struct ShaderData*)0)->t) - (char*)0)
@@ -884,7 +887,7 @@ typedef struct PathState {
 /* Subsurface */
 
 /* Struct to gather multiple SSS hits. */
-struct SubsurfaceIntersection
+typedef struct SubsurfaceIntersection
 {
 	Ray ray;
 	float3 weight[BSSRDF_MAX_HITS];
@@ -892,10 +895,10 @@ struct SubsurfaceIntersection
 	int num_hits;
 	struct Intersection hits[BSSRDF_MAX_HITS];
 	float3 Ng[BSSRDF_MAX_HITS];
-};
+} SubsurfaceIntersection;
 
 /* Struct to gather SSS indirect rays and delay tracing them. */
-struct SubsurfaceIndirectRays
+typedef struct SubsurfaceIndirectRays
 {
 	bool need_update_volume_stack;
 	bool tracing;
@@ -906,7 +909,7 @@ struct SubsurfaceIndirectRays
 	struct Ray rays[BSSRDF_MAX_HITS];
 	float3 throughputs[BSSRDF_MAX_HITS];
 	struct PathRadiance L[BSSRDF_MAX_HITS];
-};
+} SubsurfaceIndirectRays;
 
 /* Constant Kernel Data
  *

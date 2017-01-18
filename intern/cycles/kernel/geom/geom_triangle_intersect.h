@@ -104,7 +104,7 @@ ccl_device_inline float xor_signmask(float x, int y)
 
 ccl_device_inline bool triangle_intersect(KernelGlobals *kg,
                                           const IsectPrecalc *isect_precalc,
-                                          Intersection *isect,
+                                          ccl_addr_space Intersection *isect,
                                           float3 P,
                                           uint visibility,
                                           int object,
@@ -261,7 +261,7 @@ ccl_device_inline bool triangle_intersect(KernelGlobals *kg,
 ccl_device_inline void triangle_intersect_subsurface(
         KernelGlobals *kg,
         const IsectPrecalc *isect_precalc,
-        SubsurfaceIntersection *ss_isect,
+        ccl_addr_space SubsurfaceIntersection *ss_isect,
         float3 P,
         int object,
         int triAddr,
@@ -414,7 +414,7 @@ ccl_device_inline void triangle_intersect_subsurface(
 	}
 
 	/* record intersection */
-	Intersection *isect = &ss_isect->hits[hit];
+	ccl_addr_space Intersection *isect = &ss_isect->hits[hit];
 	isect->prim = triAddr;
 	isect->object = object;
 	isect->type = PRIMITIVE_TRIANGLE;
@@ -444,7 +444,7 @@ ccl_device_inline void triangle_intersect_subsurface(
 
 ccl_device_inline float3 triangle_refine(KernelGlobals *kg,
                                          ShaderData *sd,
-                                         const Intersection *isect,
+                                         ccl_addr_space const Intersection *isect,
                                          const Ray *ray)
 {
 	float3 P = ray->P;
@@ -510,7 +510,7 @@ ccl_device_inline float3 triangle_refine(KernelGlobals *kg,
  */
 ccl_device_inline float3 triangle_refine_subsurface(KernelGlobals *kg,
                                                     ShaderData *sd,
-                                                    const Intersection *isect,
+                                                    ccl_addr_space const Intersection *isect,
                                                     const Ray *ray)
 {
 	float3 P = ray->P;

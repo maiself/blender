@@ -94,12 +94,15 @@ public:
 	OpenCLProgram program_lamp_emission;
 	OpenCLProgram program_do_volume;
 	OpenCLProgram program_queue_enqueue;
-	OpenCLProgram program_background_buffer_update;
+	OpenCLProgram program_indirect_background;
 	OpenCLProgram program_shader_eval;
 	OpenCLProgram program_holdout_emission_blurring_pathtermination_ao;
+	OpenCLProgram program_subsurface_scatter;
 	OpenCLProgram program_direct_lighting;
 	OpenCLProgram program_shadow_blocked;
 	OpenCLProgram program_next_iteration_setup;
+	OpenCLProgram program_indirect_subsurface;
+	OpenCLProgram program_buffer_update;
 	OpenCLProgram program_sum_all_radiance;
 
 	/* Global memory variables [porting]; These memory is used for
@@ -131,6 +134,8 @@ public:
 	cl_mem AOLightRay_coop;
 	cl_mem Intersection_coop_shadow;
 	cl_mem state_shadow;
+	cl_mem SSS_coop;
+	cl_mem ss_isect;
 
 #ifdef WITH_CYCLES_DEBUG
 	/* DebugData memory */
@@ -210,6 +215,8 @@ public:
 		LightRay_coop = NULL;
 		Intersection_coop_shadow = NULL;
 		state_shadow = NULL;
+		SSS_coop = NULL;
+		ss_isect = NULL;
 
 #ifdef WITH_CYCLES_DEBUG
 		debugdata_coop = NULL;
@@ -293,6 +300,7 @@ public:
 			void *sd_input;
 			void *isect_shadow;
 			void *state_shadow;
+			void *ss_isect;
 		} KernelGlobals;
 
 		return sizeof(KernelGlobals);
@@ -332,12 +340,15 @@ public:
 		LOAD_KERNEL(lamp_emission);
 		LOAD_KERNEL(do_volume);
 		LOAD_KERNEL(queue_enqueue);
-		LOAD_KERNEL(background_buffer_update);
+		LOAD_KERNEL(indirect_background);
 		LOAD_KERNEL(shader_eval);
 		LOAD_KERNEL(holdout_emission_blurring_pathtermination_ao);
+		LOAD_KERNEL(subsurface_scatter);
 		LOAD_KERNEL(direct_lighting);
 		LOAD_KERNEL(shadow_blocked);
 		LOAD_KERNEL(next_iteration_setup);
+		LOAD_KERNEL(indirect_subsurface);
+		LOAD_KERNEL(buffer_update);
 		LOAD_KERNEL(sum_all_radiance);
 
 #undef FIND_KERNEL
@@ -356,12 +367,15 @@ public:
 		program_lamp_emission.release();
 		program_do_volume.release();
 		program_queue_enqueue.release();
-		program_background_buffer_update.release();
+		program_indirect_background.release();
 		program_shader_eval.release();
 		program_holdout_emission_blurring_pathtermination_ao.release();
+		program_subsurface_scatter.release();
 		program_direct_lighting.release();
 		program_shadow_blocked.release();
 		program_next_iteration_setup.release();
+		program_indirect_subsurface.release();
+		program_buffer_update.release();
 		program_sum_all_radiance.release();
 
 		/* Release global memory */
@@ -384,6 +398,8 @@ public:
 		release_mem_object_safe(LightRay_coop);
 		release_mem_object_safe(Intersection_coop_shadow);
 		release_mem_object_safe(state_shadow);
+		release_mem_object_safe(SSS_coop);
+		release_mem_object_safe(ss_isect);
 #ifdef WITH_CYCLES_DEBUG
 		release_mem_object_safe(debugdata_coop);
 #endif
@@ -511,6 +527,8 @@ public:
 			LightRay_coop = mem_alloc(num_global_elements * sizeof(Ray));
 			Intersection_coop_shadow = mem_alloc(2 * num_global_elements * sizeof(Intersection));
 			state_shadow = mem_alloc(num_global_elements * sizeof(PathState));
+			SSS_coop = mem_alloc(num_global_elements * sizeof(SubsurfaceIndirectRays));
+			ss_isect = mem_alloc(num_global_elements * sizeof(SubsurfaceIntersection));
 
 #ifdef WITH_CYCLES_DEBUG
 			debugdata_coop = mem_alloc(num_global_elements * sizeof(DebugData));
@@ -545,6 +563,8 @@ public:
 			                PathState_coop,
 			                Intersection_coop_shadow,
 			                state_shadow,
+			                ss_isect,
+			                SSS_coop,
 			                ray_state);
 
 /* TODO(sergey): Avoid map lookup here. */
@@ -645,41 +665,19 @@ public:
 		                ray_state,
 		                dQueue_size);
 
-		kernel_set_args(program_background_buffer_update(),
-		                 0,
-		                 kgbuffer,
-		                 d_data,
-		                 per_sample_output_buffers,
-		                 d_rng_state,
-		                 rng_coop,
-		                 throughput_coop,
-		                 PathRadiance_coop,
-		                 Ray_coop,
-		                 PathState_coop,
-		                 L_transparent_coop,
-		                 ray_state,
-		                 d_w,
-		                 d_h,
-		                 d_x,
-		                 d_y,
-		                 d_stride,
-		                 rtile.rng_state_offset_x,
-		                 rtile.rng_state_offset_y,
-		                 rtile.buffer_rng_state_stride,
-		                 work_array,
-		                 Queue_data,
-		                 Queue_index,
-		                 dQueue_size,
-		                 end_sample,
-		                 start_sample,
-#ifdef __WORK_STEALING__
-		                 work_pool_wgs,
-		                 num_samples,
-#endif
-#ifdef WITH_CYCLES_DEBUG
-		                 debugdata_coop,
-#endif
-		                 num_parallel_samples);
+		kernel_set_args(program_indirect_background(),
+		                0,
+		                kgbuffer,
+		                d_data,
+		                throughput_coop,
+		                PathRadiance_coop,
+		                Ray_coop,
+		                PathState_coop,
+		                L_transparent_coop,
+		                ray_state,
+		                Queue_data,
+		                Queue_index,
+		                dQueue_size);
 
 		kernel_set_args(program_shader_eval(),
 		                0,
@@ -724,6 +722,22 @@ public:
 		                start_sample,
 #endif
 		                num_parallel_samples);
+
+		kernel_set_args(program_subsurface_scatter(),
+		                0,
+		                kgbuffer,
+		                d_data,
+		                sd,
+		                rng_coop,
+		                PathState_coop,
+		                Ray_coop,
+		                throughput_coop,
+		                PathRadiance_coop,
+		                SSS_coop,
+		                ray_state,
+		                Queue_data,
+		                Queue_index,
+		                dQueue_size);
 
 		kernel_set_args(program_direct_lighting(),
 		                0,
@@ -773,6 +787,57 @@ public:
 		                Queue_index,
 		                dQueue_size,
 		                use_queues_flag);
+
+		kernel_set_args(program_indirect_subsurface(),
+		                0,
+		                kgbuffer,
+		                d_data,
+		                SSS_coop,
+		                PathRadiance_coop,
+		                PathState_coop,
+		                Ray_coop,
+		                throughput_coop,
+		                ray_state,
+		                Queue_data,
+		                Queue_index,
+		                dQueue_size);
+
+		kernel_set_args(program_buffer_update(),
+		                0,
+		                kgbuffer,
+		                d_data,
+		                per_sample_output_buffers,
+		                d_rng_state,
+		                rng_coop,
+		                throughput_coop,
+		                PathRadiance_coop,
+		                Ray_coop,
+		                PathState_coop,
+		                L_transparent_coop,
+		                SSS_coop,
+		                ray_state,
+		                d_w,
+		                d_h,
+		                d_x,
+		                d_y,
+		                d_stride,
+		                rtile.rng_state_offset_x,
+		                rtile.rng_state_offset_y,
+		                rtile.buffer_rng_state_stride,
+		                work_array,
+		                Queue_data,
+		                Queue_index,
+		                dQueue_size,
+		                end_sample,
+		                start_sample,
+#ifdef __WORK_STEALING__
+		                work_pool_wgs,
+		                num_samples,
+#endif
+#ifdef WITH_CYCLES_DEBUG
+		                debugdata_coop,
+#endif
+		                num_parallel_samples);
 
 		kernel_set_args(program_sum_all_radiance(),
 		                0,
@@ -832,12 +897,16 @@ public:
 				ENQUEUE_SPLIT_KERNEL(lamp_emission, global_size, local_size);
 				ENQUEUE_SPLIT_KERNEL(do_volume, global_size, local_size);
 				ENQUEUE_SPLIT_KERNEL(queue_enqueue, global_size, local_size);
-				ENQUEUE_SPLIT_KERNEL(background_buffer_update, global_size, local_size);
+				ENQUEUE_SPLIT_KERNEL(indirect_background, global_size, local_size);
 				ENQUEUE_SPLIT_KERNEL(shader_eval, global_size, local_size);
 				ENQUEUE_SPLIT_KERNEL(holdout_emission_blurring_pathtermination_ao, global_size, local_size);
+				ENQUEUE_SPLIT_KERNEL(subsurface_scatter, global_size, local_size);
 				ENQUEUE_SPLIT_KERNEL(direct_lighting, global_size, local_size);
 				ENQUEUE_SPLIT_KERNEL(shadow_blocked, global_size_shadow_blocked, local_size);
 				ENQUEUE_SPLIT_KERNEL(next_iteration_setup, global_size, local_size);
+				ENQUEUE_SPLIT_KERNEL(indirect_subsurface, global_size, local_size);
+				ENQUEUE_SPLIT_KERNEL(queue_enqueue, global_size, local_size);
+				ENQUEUE_SPLIT_KERNEL(buffer_update, global_size, local_size);
 
 				if(task->get_cancel()) {
 					canceled = true;
@@ -1029,6 +1098,8 @@ public:
 			+ sizeof(Ray)
 			+ (sizeof(int) * NUM_QUEUES)
 			+ sizeof(PathState)       /* state_shadow size */
+			+ sizeof(SubsurfaceIntersection) /* ss_isect size */
+			+ sizeof(SubsurfaceIndirectRays) /* SSS_coop size */
 			+ per_thread_output_buffer_size;
 		return retval;
 	}

@@ -41,7 +41,7 @@ ccl_device void kernel_lamp_emission(
         PathRadiance *PathRadiance_coop,       /* Required for lamp emission */
         ccl_global Ray *Ray_coop,              /* Required for lamp emission */
         ccl_global PathState *PathState_coop,  /* Required for lamp emission */
-        Intersection *Intersection_coop,       /* Required for lamp emission */
+        ccl_global Intersection *Intersection_coop,       /* Required for lamp emission */
         ccl_global char *ray_state,            /* Denotes the state of each ray */
         int sw, int sh,
         ccl_global char *use_queues_flag,      /* Used to decide if this kernel should use
@@ -73,7 +73,7 @@ ccl_device void kernel_lamp_emission(
 			/* intersect with lamp */
 			float3 emission;
 
-			if(indirect_lamp_emission(kg, kg->sd_input, state, &light_ray, &emission)) {
+			if(indirect_lamp_emission(kg, SD_REF(kg->sd_input, SD_THREAD), state, &light_ray, &emission)) {
 				path_radiance_accum_emission(L, throughput, emission, state->bounce);
 			}
 		}

@@ -161,7 +161,7 @@ CCL_NAMESPACE_BEGIN
 ccl_device_intersect bool scene_intersect(KernelGlobals *kg,
                                           const Ray ray,
                                           const uint visibility,
-                                          Intersection *isect,
+                                          ccl_addr_space Intersection *isect,
                                           uint *lcg_state,
                                           float difl,
                                           float extmax)
@@ -204,7 +204,7 @@ ccl_device_intersect bool scene_intersect(KernelGlobals *kg,
 #ifdef __SUBSURFACE__
 ccl_device_intersect void scene_intersect_subsurface(KernelGlobals *kg,
                                                      const Ray *ray,
-                                                     SubsurfaceIntersection *ss_isect,
+                                                     ccl_addr_space SubsurfaceIntersection *ss_isect,
                                                      int subsurface_object,
                                                      uint *lcg_state,
                                                      int max_hits)
@@ -259,7 +259,7 @@ ccl_device_intersect bool scene_intersect_shadow_all(KernelGlobals *kg, const Ra
 #ifdef __VOLUME__
 ccl_device_intersect bool scene_intersect_volume(KernelGlobals *kg,
                                                  const Ray *ray,
-                                                 Intersection *isect,
+                                                 ccl_addr_space Intersection *isect,
                                                  const uint visibility)
 {
 #  ifdef __OBJECT_MOTION__

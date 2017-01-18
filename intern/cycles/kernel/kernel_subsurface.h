@@ -36,8 +36,8 @@ ccl_device ShaderClosure *subsurface_scatter_pick_closure(KernelGlobals *kg, Sha
 	float bsdf_sum = 0.0f;
 	float bssrdf_sum = 0.0f;
 
-	for(int i = 0; i < sd->num_closure; i++) {
-		ShaderClosure *sc = &sd->closure[i];
+	for(int i = 0; i < ccl_fetch(sd, num_closure); i++) {
+		ShaderClosure *sc = &ccl_fetch(sd, closure)[i];
 		
 		if(CLOSURE_IS_BSDF(sc->type))
 			bsdf_sum += sc->sample_weight;
@@ -46,11 +46,11 @@ ccl_device ShaderClosure *subsurface_scatter_pick_closure(KernelGlobals *kg, Sha
 	}
 
 	/* use bsdf or bssrdf? */
-	float r = sd->randb_closure*(bsdf_sum + bssrdf_sum);
+	float r = ccl_fetch(sd, randb_closure)*(bsdf_sum + bssrdf_sum);
 
 	if(r < bsdf_sum) {
 		/* use bsdf, and adjust randb so we can reuse it for picking a bsdf */
-		sd->randb_closure = r/bsdf_sum;
+		ccl_fetch(sd, randb_closure) = r/bsdf_sum;
 		*probability = (bsdf_sum > 0.0f)? (bsdf_sum + bssrdf_sum)/bsdf_sum: 1.0f;
 		return NULL;
 	}
@@ -60,14 +60,14 @@ ccl_device ShaderClosure *subsurface_scatter_pick_closure(KernelGlobals *kg, Sha
 
 	float sum = 0.0f;
 
-	for(int i = 0; i < sd->num_closure; i++) {
-		ShaderClosure *sc = &sd->closure[i];
+	for(int i = 0; i < ccl_fetch(sd, num_closure); i++) {
+		ShaderClosure *sc = &ccl_fetch(sd, closure)[i];
 		
 		if(CLOSURE_IS_BSSRDF(sc->type)) {
 			sum += sc->sample_weight;
 
 			if(r <= sum) {
-				sd->randb_closure = (r - (sum - sc->sample_weight))/sc->sample_weight;
+				ccl_fetch(sd, randb_closure) = (r - (sum - sc->sample_weight))/sc->sample_weight;
 
 #ifdef BSSRDF_MULTI_EVAL
 				*probability = (bssrdf_sum > 0.0f)? (bsdf_sum + bssrdf_sum)/bssrdf_sum: 1.0f;
@@ -80,7 +80,7 @@ ccl_device ShaderClosure *subsurface_scatter_pick_closure(KernelGlobals *kg, Sha
 	}
 
 	/* should never happen */
-	sd->randb_closure = 0.0f;
+	ccl_fetch(sd, randb_closure) = 0.0f;
 	*probability = 1.0f;
 	return NULL;
 }
@@ -99,8 +99,8 @@ ccl_device_inline float3 subsurface_scatter_eval(ShaderData *sd,
 	float sample_weight_sum = 0.0f;
 	int num_bssrdf = 0;
 
-	for(int i = 0; i < sd->num_closure; i++) {
-		sc = &sd->closure[i];
+	for(int i = 0; i < ccl_fetch(sd, num_closure); i++) {
+		sc = &ccl_fetch(sd, closure)[i];
 		
 		if(CLOSURE_IS_BSSRDF(sc->type)) {
 			float sample_weight = (all)? 1.0f: sc->sample_weight;
@@ -110,8 +110,8 @@ ccl_device_inline float3 subsurface_scatter_eval(ShaderData *sd,
 
 	float sample_weight_inv = 1.0f/sample_weight_sum;
 
-	for(int i = 0; i < sd->num_closure; i++) {
-		sc = &sd->closure[i];
+	for(int i = 0; i < ccl_fetch(sd, num_closure); i++) {
+		sc = &ccl_fetch(sd, closure)[i];
 		
 		if(CLOSURE_IS_BSSRDF(sc->type)) {
 			/* in case of branched path integrate we sample all bssrdf's once,
@@ -142,17 +142,17 @@ ccl_device_inline float3 subsurface_scatter_eval(ShaderData *sd,
 /* replace closures with a single diffuse bsdf closure after scatter step */
 ccl_device void subsurface_scatter_setup_diffuse_bsdf(ShaderData *sd, float3 weight, bool hit, float3 N)
 {
-	sd->flag &= ~SD_CLOSURE_FLAGS;
-	sd->randb_closure = 0.0f;
-	sd->num_closure = 0;
-	sd->num_closure_extra = 0;
+	ccl_fetch(sd, flag) &= ~SD_CLOSURE_FLAGS;
+	ccl_fetch(sd, randb_closure) = 0.0f;
+	ccl_fetch(sd, num_closure) = 0;
+	ccl_fetch(sd, num_closure_extra) = 0;
 
 	if(hit) {
 		DiffuseBsdf *bsdf = (DiffuseBsdf*)bsdf_alloc(sd, sizeof(DiffuseBsdf), weight);
 
 		if(bsdf) {
 			bsdf->N = N;
-			sd->flag |= bsdf_diffuse_setup(bsdf);
+			ccl_fetch(sd, flag) |= bsdf_diffuse_setup(bsdf);
 
 			/* replace CLOSURE_BSDF_DIFFUSE_ID with this special ID so render passes
 			 * can recognize it as not being a regular diffuse closure */
@@ -185,7 +185,7 @@ ccl_device float3 subsurface_color_pow(float3 color, float exponent)
 
 ccl_device void subsurface_color_bump_blur(KernelGlobals *kg,
                                            ShaderData *sd,
-                                           PathState *state,
+                                           ccl_addr_space PathState *state,
                                            int state_flag,
                                            float3 *eval,
                                            float3 *N)
@@ -195,7 +195,7 @@ ccl_device void subsurface_color_bump_blur(KernelGlobals *kg,
 	float3 out_color = shader_bssrdf_sum(sd, NULL, &texture_blur);
 
 	/* do we have bump mapping? */
-	bool bump = (sd->flag & SD_HAS_BSSRDF_BUMP) != 0;
+	bool bump = (ccl_fetch(sd, flag) & SD_HAS_BSSRDF_BUMP) != 0;
 
 	if(bump || texture_blur > 0.0f) {
 		/* average color and normal at incoming point */
@@ -220,7 +220,7 @@ ccl_device void subsurface_color_bump_blur(KernelGlobals *kg,
  */
 ccl_device_inline int subsurface_scatter_multi_intersect(
         KernelGlobals *kg,
-        SubsurfaceIntersection *ss_isect,
+        ccl_addr_space SubsurfaceIntersection *ss_isect,
         ShaderData *sd,
         ShaderClosure *sc,
         uint *lcg_state,
@@ -232,12 +232,12 @@ ccl_device_inline int subsurface_scatter_multi_intersect(
 	float3 disk_N, disk_T, disk_B;
 	float pick_pdf_N, pick_pdf_T, pick_pdf_B;
 
-	disk_N = sd->Ng;
+	disk_N = ccl_fetch(sd, Ng);
 	make_orthonormals(disk_N, &disk_T, &disk_B);
 
 	/* reusing variable for picking the closure gives a bit nicer stratification
 	 * for path tracer, for branched we do all closures so it doesn't help */
-	float axisu = (all)? disk_u: sd->randb_closure;
+	float axisu = (all)? disk_u: ccl_fetch(sd, randb_closure);
 
 	if(axisu < 0.5f) {
 		pick_pdf_N = 0.5f;
@@ -277,20 +277,25 @@ ccl_device_inline int subsurface_scatter_multi_intersect(
 	float3 disk_P = (disk_r*cosf(phi)) * disk_T + (disk_r*sinf(phi)) * disk_B;
 
 	/* create ray */
+#ifdef __SPLIT_KERNEL__
+	Ray ray_object = ss_isect->ray;
+	Ray *ray = &ray_object;
+#else
 	Ray *ray = &ss_isect->ray;
-	ray->P = sd->P + disk_N*disk_height + disk_P;
+#endif
+	ray->P = ccl_fetch(sd, P) + disk_N*disk_height + disk_P;
 	ray->D = -disk_N;
 	ray->t = 2.0f*disk_height;
-	ray->dP = sd->dP;
+	ray->dP = ccl_fetch(sd, dP);
 	ray->dD = differential3_zero();
-	ray->time = sd->time;
+	ray->time = ccl_fetch(sd, time);
 
 	/* intersect with the same object. if multiple intersections are found it
 	 * will use at most BSSRDF_MAX_HITS hits, a random subset of all hits */
 	scene_intersect_subsurface(kg,
 	                           ray,
 	                           ss_isect,
-	                           sd->object,
+	                           ccl_fetch(sd, object),
 	                           lcg_state,
 	                           BSSRDF_MAX_HITS);
 	int num_eval_hits = min(ss_isect->num_hits, BSSRDF_MAX_HITS);
@@ -340,7 +345,7 @@ ccl_device_inline int subsurface_scatter_multi_intersect(
 		float mis_weight = power_heuristic_3(pdf_N, pdf_T, pdf_B);
 
 		/* real distance to sampled point */
-		float r = len(hit_P - sd->P);
+		float r = len(hit_P - ccl_fetch(sd, P));
 
 		/* evaluate */
 		float w = mis_weight / pdf_N;
@@ -350,32 +355,41 @@ ccl_device_inline int subsurface_scatter_multi_intersect(
 
 		ss_isect->weight[hit] = eval;
 	}
-
+#ifdef __SPLIT_KERNEL__
+	ss_isect->ray = *ray;
+#endif
 	return num_eval_hits;
 }
 
 ccl_device_noinline void subsurface_scatter_multi_setup(
         KernelGlobals *kg,
-        SubsurfaceIntersection* ss_isect,
+        ccl_addr_space SubsurfaceIntersection* ss_isect,
         int hit,
         ShaderData *sd,
-        PathState *state,
+        ccl_addr_space PathState *state,
         int state_flag,
         ShaderClosure *sc,
         bool all)
 {
+#ifdef __SPLIT_KERNEL__
+	Ray ray_object = ss_isect->ray;
+	Ray *ray = &ray_object;
+#else
+	Ray *ray = &ss_isect->ray;
+#endif
 	/* Setup new shading point. */
-	shader_setup_from_subsurface(kg, sd, &ss_isect->hits[hit], &ss_isect->ray);
+	shader_setup_from_subsurface(kg, sd, &ss_isect->hits[hit], ray);
 
 	/* Optionally blur colors and bump mapping. */
 	float3 weight = ss_isect->weight[hit];
-	float3 N = sd->N;
+	float3 N = ccl_fetch(sd, N);
 	subsurface_color_bump_blur(kg, sd, state, state_flag, &weight, &N);
 
 	/* Setup diffuse BSDF. */
 	subsurface_scatter_setup_diffuse_bsdf(sd, weight, true, N);
 }
 
+#ifndef __SPLIT_KERNEL__
 /* subsurface scattering step, from a point on the surface to another nearby point on the same object */
 ccl_device void subsurface_scatter_step(KernelGlobals *kg, ShaderData *sd, PathState *state,
 	int state_flag, ShaderClosure *sc, uint *lcg_state, float disk_u, float disk_v, bool all)
@@ -465,6 +479,7 @@ ccl_device void subsurface_scatter_step(KernelGlobals *kg, ShaderData *sd, PathS
 	/* setup diffuse bsdf */
 	subsurface_scatter_setup_diffuse_bsdf(sd, eval, (ss_isect.num_hits > 0), N);
 }
+#endif /* ! __SPLIT_KERNEL */
 
 CCL_NAMESPACE_END
 

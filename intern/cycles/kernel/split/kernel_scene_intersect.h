@@ -66,7 +66,7 @@ ccl_device void kernel_scene_intersect(
         ccl_global uint *rng_coop,
         ccl_global Ray *Ray_coop,              /* Required for scene_intersect */
         ccl_global PathState *PathState_coop,  /* Required for scene_intersect */
-        Intersection *Intersection_coop,       /* Required for scene_intersect */
+        ccl_global Intersection *Intersection_coop,       /* Required for scene_intersect */
         ccl_global char *ray_state,            /* Denotes the state of each ray */
         int sw, int sh,
         ccl_global char *use_queues_flag,      /* used to decide if this kernel should use
@@ -86,7 +86,7 @@ ccl_device void kernel_scene_intersect(
 #ifdef __KERNEL_DEBUG__
 	DebugData *debug_data = &debugdata_coop[ray_index];
 #endif
-	Intersection *isect = &Intersection_coop[ray_index];
+	ccl_global Intersection *isect = &Intersection_coop[ray_index];
 	PathState state = PathState_coop[ray_index];
 	Ray ray = Ray_coop[ray_index];
 

@@ -72,7 +72,7 @@ ccl_device void kernel_shadow_blocked(
 		float3 shadow;
 		Ray ray = *light_ray_global;
 		update_path_radiance = !(shadow_blocked(kg,
-		                                        kg->sd_input,
+		                                        SD_REF(kg->sd_input, SD_THREAD),
 		                                        state,
 		                                        &ray,
 		                                        &shadow));

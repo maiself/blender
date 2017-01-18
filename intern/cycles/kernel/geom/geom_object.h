@@ -426,7 +426,7 @@ ccl_device_inline float3 bvh_inverse_direction(float3 dir)
 
 /* Transform ray into object space to enter static object in BVH */
 
-ccl_device_inline void bvh_instance_push(KernelGlobals *kg, int object, const Ray *ray, float3 *P, float3 *dir, float3 *idir, ccl_addr_space float *t)
+ccl_device_inline void bvh_instance_push(KernelGlobals *kg, int object, const Ray *ray, float3 *P, float3 *dir, float3 *idir, float *t)
 {
 	Transform tfm = object_fetch_transform(kg, object, OBJECT_INVERSE_TRANSFORM);
 
@@ -508,7 +508,7 @@ ccl_device_inline void bvh_instance_motion_push(KernelGlobals *kg,
                                                 float3 *P,
                                                 float3 *dir,
                                                 float3 *idir,
-                                                ccl_addr_space float *t,
+                                                float *t,
                                                 Transform *itfm)
 {
 	object_fetch_transform_motion_test(kg, object, ray->time, itfm);
@@ -627,16 +627,53 @@ ccl_device_inline void object_normal_transform_addrspace(KernelGlobals *kg,
 	object_normal_transform(kg, sd, &private_N);
 	*N = private_N;
 }
-#endif
+
+ccl_device_inline void bvh_instance_push_addrspace(KernelGlobals *kg,
+						   int object,
+						   const Ray *ray,
+						   float3 *P,
+						   float3 *dir,
+						   float3 *idir,
+						   ccl_addr_space float *t)
+{
+	float private_t = *t;
+	bvh_instance_push(kg, object, ray, P, dir, idir, &private_t);
+	*t = private_t;
+}
+#  ifdef __OBJECT_MOTION__
+ccl_device_inline void bvh_instance_motion_push_addrspace(KernelGlobals *kg,
+							  int object,
+							  const Ray *ray,
+							  float3 *P,
+							  float3 *dir,
+							  float3 *idir,
+							  ccl_addr_space float *t,
+							  Transform *itfm)
+{
+	float private_t = *t;
+	bvh_instance_motion_push(kg, object, ray, P, dir, idir, &private_t, itfm);
+	*t = private_t;
+}
+#  endif /* __OBJECT_MOTION__ */
+#endif /* __KERNEL_OPENCL */
 
 #ifndef __KERNEL_OPENCL__
 #  define object_position_transform_auto object_position_transform
 #  define object_dir_transform_auto object_dir_transform
 #  define object_normal_transform_auto object_normal_transform
+#  define bvh_instance_push_auto bvh_instance_push
+#  ifdef __OBJECT_MOTION__
+#    define bvh_instance_motion_push_auto bvh_instance_motion_push
+#  endif
 #else
 #  define object_position_transform_auto object_position_transform_addrspace
 #  define object_dir_transform_auto object_dir_transform_addrspace
 #  define object_normal_transform_auto object_normal_transform_addrspace
+#  define object_normal_transform_auto object_normal_transform_addrspace
+#  define bvh_instance_push_auto bvh_instance_push_addrspace
+#  ifdef __OBJECT_MOTION__
+#    define bvh_instance_motion_push_auto bvh_instance_motion_push_addrspace
+#  endif
 #endif
 
 CCL_NAMESPACE_END

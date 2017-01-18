@@ -24,7 +24,7 @@ __kernel void kernel_ocl_path_trace_do_volume(
         PathRadiance *PathRadiance_coop,       /* Required for volume */
         ccl_global Ray *Ray_coop,              /* Required for volume */
         ccl_global PathState *PathState_coop,  /* Required for volume */
-        Intersection *Intersection_coop,       /* Required for volume */
+        ccl_global Intersection *Intersection_coop,       /* Required for volume */
         ccl_global uint *rng_coop,             /* Required for rbsdf calculation */
         ccl_global char *ray_state,            /* Denotes the state of each ray */
         int sw, int sh,
@@ -71,7 +71,7 @@ __kernel void kernel_ocl_path_trace_do_volume(
 
 #ifdef __VOLUME__
 	kernel_do_volume((KernelGlobals *)kg,
-			 (ShaderData *)sd,
+			 SD_REF((ShaderData *)sd, ray_index),
 			 throughput_coop,
 			 PathRadiance_coop,
 			 Ray_coop,

@@ -50,12 +50,12 @@ ccl_device void kernel_shader_eval(
         ccl_global uint *rng_coop,             /* Required for rbsdf calculation */
         ccl_global Ray *Ray_coop,              /* Required for setting up shader from ray */
         ccl_global PathState *PathState_coop,  /* Required for all functions in this kernel */
-        Intersection *Intersection_coop,       /* Required for setting up shader from ray */
+        ccl_global Intersection *Intersection_coop,       /* Required for setting up shader from ray */
         ccl_global char *ray_state,            /* Denotes the state of each ray */
         int ray_index)
 {
 	if(IS_STATE(ray_state, ray_index, RAY_ACTIVE)) {
-		Intersection *isect = &Intersection_coop[ray_index];
+		ccl_global Intersection *isect = &Intersection_coop[ray_index];
 		ccl_global uint *rng = &rng_coop[ray_index];
 		ccl_global PathState *state = &PathState_coop[ray_index];
 		Ray ray = Ray_coop[ray_index];

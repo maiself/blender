@@ -51,7 +51,7 @@ ccl_device void shader_setup_object_transforms(KernelGlobals *kg, ShaderData *sd
 
 ccl_device_noinline void shader_setup_from_ray(KernelGlobals *kg,
                                                ShaderData *sd,
-                                               const Intersection *isect,
+                                               ccl_addr_space const Intersection *isect,
                                                const Ray *ray)
 {
 #ifdef __INSTANCING__
@@ -157,37 +157,37 @@ ccl_device_inline
 void shader_setup_from_subsurface(
         KernelGlobals *kg,
         ShaderData *sd,
-        const Intersection *isect,
+        ccl_addr_space const Intersection *isect,
         const Ray *ray)
 {
-	bool backfacing = sd->flag & SD_BACKFACING;
+	bool backfacing = ccl_fetch(sd, flag) & SD_BACKFACING;
 
 	/* object, matrices, time, ray_length stay the same */
-	sd->flag = kernel_tex_fetch(__object_flag, sd->object);
-	sd->prim = kernel_tex_fetch(__prim_index, isect->prim);
-	sd->type = isect->type;
+	ccl_fetch(sd, flag) = kernel_tex_fetch(__object_flag, ccl_fetch(sd, object));
+	ccl_fetch(sd, prim) = kernel_tex_fetch(__prim_index, isect->prim);
+	ccl_fetch(sd, type) = isect->type;
 
 #  ifdef __UV__
-	sd->u = isect->u;
-	sd->v = isect->v;
+	ccl_fetch(sd, u) = isect->u;
+	ccl_fetch(sd, v) = isect->v;
 #  endif
 
 	/* fetch triangle data */
-	if(sd->type == PRIMITIVE_TRIANGLE) {
+	if(ccl_fetch(sd, type) == PRIMITIVE_TRIANGLE) {
 		float3 Ng = triangle_normal(kg, sd);
-		sd->shader = kernel_tex_fetch(__tri_shader, sd->prim);
+		ccl_fetch(sd, shader) = kernel_tex_fetch(__tri_shader, ccl_fetch(sd, prim));
 
 		/* static triangle */
-		sd->P = triangle_refine_subsurface(kg, sd, isect, ray);
-		sd->Ng = Ng;
-		sd->N = Ng;
+		ccl_fetch(sd, P) = triangle_refine_subsurface(kg, sd, isect, ray);
+		ccl_fetch(sd, Ng) = Ng;
+		ccl_fetch(sd, N) = Ng;
 
-		if(sd->shader & SHADER_SMOOTH_NORMAL)
-			sd->N = triangle_smooth_normal(kg, sd->prim, sd->u, sd->v);
+		if(ccl_fetch(sd, shader) & SHADER_SMOOTH_NORMAL)
+			ccl_fetch(sd, N) = triangle_smooth_normal(kg, ccl_fetch(sd, prim), ccl_fetch(sd, u), ccl_fetch(sd, v));
 
 #  ifdef __DPDU__
 		/* dPdu/dPdv */
-		triangle_dPdudv(kg, sd->prim, &sd->dPdu, &sd->dPdv);
+		triangle_dPdudv(kg, ccl_fetch(sd, prim), &ccl_fetch(sd, dPdu), &ccl_fetch(sd, dPdv));
 #  endif
 	}
 	else {
@@ -195,38 +195,38 @@ void shader_setup_from_subsurface(
 		motion_triangle_shader_setup(kg, sd, isect, ray, true);
 	}
 
-	sd->flag |= kernel_tex_fetch(__shader_flag, (sd->shader & SHADER_MASK)*SHADER_SIZE);
+	ccl_fetch(sd, flag) |= kernel_tex_fetch(__shader_flag, (ccl_fetch(sd, shader) & SHADER_MASK)*SHADER_SIZE);
 
 #  ifdef __INSTANCING__
 	if(isect->object != OBJECT_NONE) {
 		/* instance transform */
-		object_normal_transform(kg, sd, &sd->N);
-		object_normal_transform(kg, sd, &sd->Ng);
+		object_normal_transform_auto(kg, sd, &ccl_fetch(sd, N));
+		object_normal_transform_auto(kg, sd, &ccl_fetch(sd, Ng));
 #    ifdef __DPDU__
-		object_dir_transform(kg, sd, &sd->dPdu);
-		object_dir_transform(kg, sd, &sd->dPdv);
+		object_dir_transform_auto(kg, sd, &ccl_fetch(sd, dPdu));
+		object_dir_transform_auto(kg, sd, &ccl_fetch(sd, dPdv));
 #    endif
 	}
 #  endif
 
 	/* backfacing test */
 	if(backfacing) {
-		sd->flag |= SD_BACKFACING;
-		sd->Ng = -sd->Ng;
-		sd->N = -sd->N;
+		ccl_fetch(sd, flag) |= SD_BACKFACING;
+		ccl_fetch(sd, Ng) = -ccl_fetch(sd, Ng);
+		ccl_fetch(sd, N) = -ccl_fetch(sd, N);
 #  ifdef __DPDU__
-		sd->dPdu = -sd->dPdu;
-		sd->dPdv = -sd->dPdv;
+		ccl_fetch(sd, dPdu) = -ccl_fetch(sd, dPdu);
+		ccl_fetch(sd, dPdv) = -ccl_fetch(sd, dPdv);
 #  endif
 	}
 
 	/* should not get used in principle as the shading will only use a diffuse
 	 * BSDF, but the shader might still access it */
-	sd->I = sd->N;
+	ccl_fetch(sd, I) = ccl_fetch(sd, N);
 
 #  ifdef __RAY_DIFFERENTIALS__
 	/* differentials */
-	differential_dudv(&sd->du, &sd->dv, sd->dPdu, sd->dPdv, sd->dP, sd->Ng);
+	differential_dudv(&ccl_fetch(sd, du), &ccl_fetch(sd, dv), ccl_fetch(sd, dPdu), ccl_fetch(sd, dPdv), ccl_fetch(sd, dP), ccl_fetch(sd, Ng));
 	/* don't modify dP and dI */
 #  endif
 }
@@ -1092,7 +1092,7 @@ ccl_device void shader_eval_displacement(KernelGlobals *kg, ShaderData *sd, ccl_
 /* Transparent Shadows */
 
 #ifdef __TRANSPARENT_SHADOWS__
-ccl_device bool shader_transparent_shadow(KernelGlobals *kg, Intersection *isect)
+ccl_device bool shader_transparent_shadow(KernelGlobals *kg, ccl_addr_space Intersection *isect)
 {
 	int prim = kernel_tex_fetch(__prim_index, isect->prim);
 	int shader = 0;

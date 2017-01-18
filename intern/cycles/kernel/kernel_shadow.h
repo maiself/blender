@@ -199,7 +199,7 @@ ccl_device_noinline bool shadow_blocked(KernelGlobals *kg,
 #endif
 
 #ifdef __SPLIT_KERNEL__
-	Intersection *isect = &kg->isect_shadow[SD_THREAD];
+	ccl_addr_space Intersection *isect = &kg->isect_shadow[SD_THREAD];
 #else
 	Intersection isect_object;
 	Intersection *isect = &isect_object;

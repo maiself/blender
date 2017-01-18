@@ -23,7 +23,7 @@ __kernel void kernel_ocl_path_trace_lamp_emission(
         PathRadiance *PathRadiance_coop,       /* Required for lamp emission */
         ccl_global Ray *Ray_coop,              /* Required for lamp emission */
         ccl_global PathState *PathState_coop,  /* Required for lamp emission */
-        Intersection *Intersection_coop,       /* Required for lamp emission */
+        ccl_global Intersection *Intersection_coop,       /* Required for lamp emission */
         ccl_global char *ray_state,            /* Denotes the state of each ray */
         int sw, int sh,
         ccl_global int *Queue_data,            /* Memory for queues */

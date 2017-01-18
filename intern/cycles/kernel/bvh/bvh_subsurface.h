@@ -42,7 +42,7 @@ ccl_device_inline
 #endif
 void BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
                                  const Ray *ray,
-                                 SubsurfaceIntersection *ss_isect,
+                                 ccl_addr_space SubsurfaceIntersection *ss_isect,
                                  int subsurface_object,
                                  uint *lcg_state,
                                  int max_hits)
@@ -238,7 +238,7 @@ void BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
 
 ccl_device_inline void BVH_FUNCTION_NAME(KernelGlobals *kg,
                                          const Ray *ray,
-                                         SubsurfaceIntersection *ss_isect,
+                                         ccl_addr_space SubsurfaceIntersection *ss_isect,
                                          int subsurface_object,
                                          uint *lcg_state,
                                          int max_hits)

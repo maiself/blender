@@ -23,7 +23,7 @@ __kernel void kernel_ocl_path_trace_shader_eval(
         ccl_global uint *rng_coop,             /* Required for rbsdf calculation */
         ccl_global Ray *Ray_coop,              /* Required for setting up shader from ray */
         ccl_global PathState *PathState_coop,  /* Required for all functions in this kernel */
-        Intersection *Intersection_coop,       /* Required for setting up shader from ray */
+        ccl_global Intersection *Intersection_coop,       /* Required for setting up shader from ray */
         ccl_global char *ray_state,            /* Denotes the state of each ray */
         ccl_global int *Queue_data,            /* queue memory */
         ccl_global int *Queue_index,           /* Tracks the number of elements in each queue */
@@ -58,7 +58,7 @@ __kernel void kernel_ocl_path_trace_shader_eval(
 
 	/* Continue on with shader evaluation. */
 	kernel_shader_eval((KernelGlobals *)kg,
-	                   (ShaderData *)sd,
+	                   SD_REF((ShaderData *)sd, ray_index),
 	                   rng_coop,
 	                   Ray_coop,
 	                   PathState_coop,

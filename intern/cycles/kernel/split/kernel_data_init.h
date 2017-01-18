@@ -62,8 +62,10 @@ ccl_device void kernel_data_init(
         PathRadiance *PathRadiance_coop,             /* PathRadiance array to store PathRadiance values for all rays */
         ccl_global Ray *Ray_coop,                    /* Ray array to store Ray information for all rays */
         ccl_global PathState *PathState_coop,        /* PathState array to store PathState information for all rays */
-        Intersection *Intersection_coop_shadow,
+        ccl_global Intersection *Intersection_coop_shadow,
         ccl_global PathState *state_shadow,
+        ccl_global SubsurfaceIntersection *ss_isect,
+        ccl_global SubsurfaceIndirectRays *SSS_coop,
         ccl_global char *ray_state,                  /* Stores information on current state of a ray */
 
 #define KERNEL_TEX(type, ttype, name)                                   \
@@ -92,6 +94,7 @@ ccl_device void kernel_data_init(
 	kg->sd_input = sd_DL_shadow;
 	kg->isect_shadow = Intersection_coop_shadow;
 	kg->state_shadow = state_shadow;
+	kg->ss_isect = ss_isect;
 #define KERNEL_TEX(type, ttype, name) \
 	kg->name = name;
 #include "../kernel_textures.h"
@@ -209,11 +212,15 @@ ccl_device void kernel_data_init(
 			L_transparent_coop[ray_index] = 0.0f;
 			path_radiance_init(&PathRadiance_coop[ray_index], kernel_data.film.use_light_pass);
 			path_state_init(kg,
-			                kg->sd_input,
+			                SD_REF(kg->sd_input, SD_THREAD),
 			                &PathState_coop[ray_index],
 			                &rng_coop[ray_index],
 			                my_sample,
 			                &Ray_coop[ray_index]);
+#ifdef __SUBSURFACE__
+			kernel_path_subsurface_init_indirect(&SSS_coop[ray_index]);
+#endif
+
 #ifdef __KERNEL_DEBUG__
 			debug_data_init(&debugdata_coop[ray_index]);
 #endif

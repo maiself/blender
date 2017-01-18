@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "split/kernel_background_buffer_update.h"
+#include "split/kernel_buffer_update.h"
 
-__kernel void kernel_ocl_path_trace_background_buffer_update(
+__kernel void kernel_ocl_path_trace_buffer_update(
         ccl_global char *kg,
         ccl_constant KernelData *data,
         ccl_global float *per_sample_output_buffers,
@@ -27,6 +27,7 @@ __kernel void kernel_ocl_path_trace_background_buffer_update(
         ccl_global Ray *Ray_coop,              /* Required for background hit processing */
         ccl_global PathState *PathState_coop,  /* Required for background hit processing */
         ccl_global float *L_transparent_coop,  /* Required for background hit processing and buffer Update */
+        ccl_global SubsurfaceIndirectRays *SSS_coop,     /* Required for radiance update - direct lighting */
         ccl_global char *ray_state,            /* Stores information on the current state of a ray */
         int sw, int sh, int sx, int sy, int stride,
         int rng_state_offset_x,
@@ -82,32 +83,33 @@ __kernel void kernel_ocl_path_trace_background_buffer_update(
 	if(ray_index != QUEUE_EMPTY_SLOT) {
 #endif
 		enqueue_flag =
-			kernel_background_buffer_update((KernelGlobals *)kg,
-			                                per_sample_output_buffers,
-			                                rng_state,
-			                                rng_coop,
-			                                throughput_coop,
-			                                PathRadiance_coop,
-			                                Ray_coop,
-			                                PathState_coop,
-			                                L_transparent_coop,
-			                                ray_state,
-			                                sw, sh, sx, sy, stride,
-			                                rng_state_offset_x,
-			                                rng_state_offset_y,
-			                                rng_state_stride,
-			                                work_array,
-			                                end_sample,
-			                                start_sample,
+			kernel_buffer_update((KernelGlobals *)kg,
+			                     per_sample_output_buffers,
+			                     rng_state,
+			                     rng_coop,
+			                     throughput_coop,
+			                     PathRadiance_coop,
+			                     Ray_coop,
+			                     PathState_coop,
+			                     L_transparent_coop,
+			                     SSS_coop,
+			                     ray_state,
+			                     sw, sh, sx, sy, stride,
+			                     rng_state_offset_x,
+			                     rng_state_offset_y,
+			                     rng_state_stride,
+			                     work_array,
+			                     end_sample,
+			                     start_sample,
 #ifdef __WORK_STEALING__
-			                                work_pool_wgs,
-			                                num_samples,
+			                     work_pool_wgs,
+			                     num_samples,
 #endif
 #ifdef __KERNEL_DEBUG__
-			                                debugdata_coop,
+			                     debugdata_coop,
 #endif
-			                                parallel_samples,
-			                                ray_index);
+			                     parallel_samples,
+			                     ray_index);
 #ifndef __COMPUTE_DEVICE_GPU__
 	}
 #endif

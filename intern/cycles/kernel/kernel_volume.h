@@ -1129,7 +1129,7 @@ ccl_device void kernel_volume_stack_init(KernelGlobals *kg,
 	      step < 2 * VOLUME_STACK_SIZE)
 	{
 #ifdef __SPLIT_KERNEL__
-		Intersection *isect = &kg->isect_shadow[SD_THREAD];
+		ccl_addr_space Intersection *isect = &kg->isect_shadow[SD_THREAD];
 #else
 		Intersection isect_object;
 		Intersection *isect = &isect_object;
@@ -1243,7 +1243,7 @@ ccl_device void kernel_volume_stack_enter_exit(KernelGlobals *kg, ShaderData *sd
 ccl_device void kernel_volume_stack_update_for_subsurface(KernelGlobals *kg,
                                                           ShaderData *stack_sd,
                                                           Ray *ray,
-                                                          VolumeStack *stack)
+                                                          ccl_addr_space VolumeStack *stack)
 {
 	kernel_assert(kernel_data.integrator.use_volumes);
 
@@ -1267,20 +1267,25 @@ ccl_device void kernel_volume_stack_update_for_subsurface(KernelGlobals *kg,
 		}
 	}
 #  else
-	Intersection isect;
+#ifdef __SPLIT_KERNEL__
+	ccl_addr_space Intersection *isect = &kg->isect_shadow[SD_THREAD];
+#else
+	Intersection isect_object;
+	Intersection *isect = &isect_object;
+#endif
 	int step = 0;
 	float3 Pend = ray->P + ray->D*ray->t;
 	while(step < 2 * VOLUME_STACK_SIZE &&
 	      scene_intersect_volume(kg,
 	                             &volume_ray,
-	                             &isect,
+	                             isect,
 	                             PATH_RAY_ALL_VISIBILITY))
 	{
-		shader_setup_from_ray(kg, stack_sd, &isect, &volume_ray);
+		shader_setup_from_ray(kg, stack_sd, isect, &volume_ray);
 		kernel_volume_stack_enter_exit(kg, stack_sd, stack);
 
 		/* Move ray forward. */
-		volume_ray.P = ray_offset(stack_sd->P, -stack_sd->Ng);
+		volume_ray.P = ray_offset(ccl_fetch(stack_sd, P), -ccl_fetch(stack_sd, Ng));
 		if(volume_ray.t != FLT_MAX) {
 			volume_ray.D = normalize_len(Pend - volume_ray.P, &volume_ray.t);
 		}

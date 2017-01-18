@@ -121,7 +121,7 @@ ccl_device_inline void motion_triangle_vertices(KernelGlobals *kg, int object, i
  * far the precision is often not so good, this reintersects the primitive from
  * a closer distance. */
 
-ccl_device_inline float3 motion_triangle_refine(KernelGlobals *kg, ShaderData *sd, const Intersection *isect, const Ray *ray, float3 verts[3])
+ccl_device_inline float3 motion_triangle_refine(KernelGlobals *kg, ShaderData *sd, ccl_addr_space const Intersection *isect, const Ray *ray, float3 verts[3])
 {
 	float3 P = ray->P;
 	float3 D = ray->D;
@@ -182,7 +182,7 @@ ccl_device_noinline
 #  else
 ccl_device_inline
 #  endif
-float3 motion_triangle_refine_subsurface(KernelGlobals *kg, ShaderData *sd, const Intersection *isect, const Ray *ray, float3 verts[3])
+float3 motion_triangle_refine_subsurface(KernelGlobals *kg, ShaderData *sd, ccl_addr_space const Intersection *isect, const Ray *ray, float3 verts[3])
 {
 	float3 P = ray->P;
 	float3 D = ray->D;
@@ -237,7 +237,7 @@ float3 motion_triangle_refine_subsurface(KernelGlobals *kg, ShaderData *sd, cons
  * normals */
 
 /* return 3 triangle vertex normals */
-ccl_device_noinline void motion_triangle_shader_setup(KernelGlobals *kg, ShaderData *sd, const Intersection *isect, const Ray *ray, bool subsurface)
+ccl_device_noinline void motion_triangle_shader_setup(KernelGlobals *kg, ShaderData *sd, ccl_addr_space const Intersection *isect, const Ray *ray, bool subsurface)
 {
 	/* get shader */
 	ccl_fetch(sd, shader) = kernel_tex_fetch(__tri_shader, ccl_fetch(sd, prim));
@@ -322,7 +322,7 @@ ccl_device_noinline void motion_triangle_shader_setup(KernelGlobals *kg, ShaderD
 /* Ray intersection. We simply compute the vertex positions at the given ray
  * time and do a ray intersection with the resulting triangle */
 
-ccl_device_inline bool motion_triangle_intersect(KernelGlobals *kg, Intersection *isect,
+ccl_device_inline bool motion_triangle_intersect(KernelGlobals *kg, ccl_addr_space Intersection *isect,
 	float3 P, float3 dir, float time, uint visibility, int object, int triAddr)
 {
 	/* primitive index for vertex location lookup */
@@ -364,7 +364,7 @@ ccl_device_inline bool motion_triangle_intersect(KernelGlobals *kg, Intersection
 #ifdef __SUBSURFACE__
 ccl_device_inline void motion_triangle_intersect_subsurface(
         KernelGlobals *kg,
-        SubsurfaceIntersection *ss_isect,
+        ccl_addr_space SubsurfaceIntersection *ss_isect,
         float3 P,
         float3 dir,
         float time,
@@ -409,7 +409,7 @@ ccl_device_inline void motion_triangle_intersect_subsurface(
 		}
 
 		/* record intersection */
-		Intersection *isect = &ss_isect->hits[hit];
+		ccl_addr_space Intersection *isect = &ss_isect->hits[hit];
 		isect->t = t;
 		isect->u = u;
 		isect->v = v;

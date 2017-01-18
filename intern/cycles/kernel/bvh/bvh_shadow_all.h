@@ -44,7 +44,7 @@ ccl_device_inline
 #endif
 bool BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
                                  const Ray *ray,
-                                 Intersection *isect_array,
+                                 ccl_addr_space Intersection *isect_array,
                                  const uint max_hits,
                                  uint *num_hits)
 {
@@ -398,7 +398,7 @@ bool BVH_FUNCTION_FULL_NAME(BVH)(KernelGlobals *kg,
 
 ccl_device_inline bool BVH_FUNCTION_NAME(KernelGlobals *kg,
                                          const Ray *ray,
-                                         Intersection *isect_array,
+                                         ccl_addr_space Intersection *isect_array,
                                          const uint max_hits,
                                          uint *num_hits)
 {
