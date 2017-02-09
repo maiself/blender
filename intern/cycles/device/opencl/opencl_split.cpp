@@ -89,21 +89,7 @@ class OpenCLDeviceSplitKernel : public OpenCLDeviceBase
 {
 public:
 	/* Kernel declaration. */
-	OpenCLProgram program_data_init;
-	OpenCLProgram program_scene_intersect;
-	OpenCLProgram program_lamp_emission;
-	OpenCLProgram program_do_volume;
-	OpenCLProgram program_queue_enqueue;
-	OpenCLProgram program_indirect_background;
-	OpenCLProgram program_shader_eval;
-	OpenCLProgram program_holdout_emission_blurring_pathtermination_ao;
-	OpenCLProgram program_subsurface_scatter;
-	OpenCLProgram program_direct_lighting;
-	OpenCLProgram program_shadow_blocked;
-	OpenCLProgram program_next_iteration_setup;
-	OpenCLProgram program_indirect_subsurface;
-	OpenCLProgram program_buffer_update;
-	OpenCLProgram program_sum_all_radiance;
+	OpenCLProgram program_split;
 
 	/* Global memory variables [porting]; These memory is used for
 	 * co-operation between different kernels; Data written by one
@@ -327,12 +313,12 @@ public:
 			build_options += " -D__COMPUTE_DEVICE_GPU__";
 		}
 
+		program_split = OpenCLProgram(this, "program_split", "kernel_split.cl", build_options);
+		programs.push_back(&program_split);
 #define GLUE(a, b) a ## b
 #define LOAD_KERNEL(name) \
 	do { \
-		GLUE(program_, name) = OpenCLProgram(this, "split_" #name, "kernel_" #name ".cl", build_options); \
-		GLUE(program_, name).add_kernel(ustring("path_trace_" #name)); \
-		programs.push_back(&GLUE(program_, name)); \
+		program_split.add_kernel(ustring("path_trace_" #name)); \
 	} while(false)
 
 		LOAD_KERNEL(data_init);
@@ -362,21 +348,7 @@ public:
 		task_pool.stop();
 
 		/* Release kernels */
-		program_data_init.release();
-		program_scene_intersect.release();
-		program_lamp_emission.release();
-		program_do_volume.release();
-		program_queue_enqueue.release();
-		program_indirect_background.release();
-		program_shader_eval.release();
-		program_holdout_emission_blurring_pathtermination_ao.release();
-		program_subsurface_scatter.release();
-		program_direct_lighting.release();
-		program_shadow_blocked.release();
-		program_next_iteration_setup.release();
-		program_indirect_subsurface.release();
-		program_buffer_update.release();
-		program_sum_all_radiance.release();
+		program_split.release();
 
 		/* Release global memory */
 		release_mem_object_safe(rng_coop);
@@ -548,7 +520,7 @@ public:
 		cl_int dQueue_size = global_size[0] * global_size[1];
 
 		cl_uint start_arg_index =
-			kernel_set_args(program_data_init(),
+			kernel_set_args(program_split(ustring("path_trace_data_init")),
 			                0,
 			                kgbuffer,
 			                sd_DL_shadow,
@@ -569,12 +541,12 @@ public:
 
 /* TODO(sergey): Avoid map lookup here. */
 #define KERNEL_TEX(type, ttype, name) \
-	set_kernel_arg_mem(program_data_init(), &start_arg_index, #name);
+	set_kernel_arg_mem(program_split(ustring("path_trace_data_init")), &start_arg_index, #name);
 #include "kernel_textures.h"
 #undef KERNEL_TEX
 
 		start_arg_index +=
-			kernel_set_args(program_data_init(),
+			kernel_set_args(program_split(ustring("path_trace_data_init")),
 			                start_arg_index,
 			                start_sample,
 			                d_x,
@@ -600,7 +572,7 @@ public:
 #endif
 			                num_parallel_samples);
 
-		kernel_set_args(program_scene_intersect(),
+		kernel_set_args(program_split(ustring("path_trace_scene_intersect")),
 		                0,
 		                kgbuffer,
 		                d_data,
@@ -620,7 +592,7 @@ public:
 #endif
 		                num_parallel_samples);
 
-		kernel_set_args(program_lamp_emission(),
+		kernel_set_args(program_split(ustring("path_trace_lamp_emission")),
 		                0,
 		                kgbuffer,
 		                d_data,
@@ -638,7 +610,7 @@ public:
 		                use_queues_flag,
 		                num_parallel_samples);
 
-		kernel_set_args(program_do_volume(),
+		kernel_set_args(program_split(ustring("path_trace_do_volume")),
 		                0,
 		                kgbuffer,
 		                d_data,
@@ -658,14 +630,14 @@ public:
 		                use_queues_flag,
 		                num_parallel_samples);
 
-		kernel_set_args(program_queue_enqueue(),
+		kernel_set_args(program_split(ustring("path_trace_queue_enqueue")),
 		                0,
 		                Queue_data,
 		                Queue_index,
 		                ray_state,
 		                dQueue_size);
 
-		kernel_set_args(program_indirect_background(),
+		kernel_set_args(program_split(ustring("path_trace_indirect_background")),
 		                0,
 		                kgbuffer,
 		                d_data,
@@ -679,7 +651,7 @@ public:
 		                Queue_index,
 		                dQueue_size);
 
-		kernel_set_args(program_shader_eval(),
+		kernel_set_args(program_split(ustring("path_trace_shader_eval")),
 		                0,
 		                kgbuffer,
 		                d_data,
@@ -693,7 +665,7 @@ public:
 		                Queue_index,
 		                dQueue_size);
 
-		kernel_set_args(program_holdout_emission_blurring_pathtermination_ao(),
+		kernel_set_args(program_split(ustring("path_trace_holdout_emission_blurring_pathtermination_ao")),
 		                0,
 		                kgbuffer,
 		                d_data,
@@ -723,7 +695,7 @@ public:
 #endif
 		                num_parallel_samples);
 
-		kernel_set_args(program_subsurface_scatter(),
+		kernel_set_args(program_split(ustring("path_trace_subsurface_scatter")),
 		                0,
 		                kgbuffer,
 		                d_data,
@@ -739,7 +711,7 @@ public:
 		                Queue_index,
 		                dQueue_size);
 
-		kernel_set_args(program_direct_lighting(),
+		kernel_set_args(program_split(ustring("path_trace_direct_lighting")),
 		                0,
 		                kgbuffer,
 		                d_data,
@@ -754,7 +726,7 @@ public:
 		                Queue_index,
 		                dQueue_size);
 
-		kernel_set_args(program_shadow_blocked(),
+		kernel_set_args(program_split(ustring("path_trace_shadow_blocked")),
 		                0,
 		                kgbuffer,
 		                d_data,
@@ -766,7 +738,7 @@ public:
 		                Queue_index,
 		                dQueue_size);
 
-		kernel_set_args(program_next_iteration_setup(),
+		kernel_set_args(program_split(ustring("path_trace_next_iteration_setup")),
 		                0,
 		                kgbuffer,
 		                d_data,
@@ -788,7 +760,7 @@ public:
 		                dQueue_size,
 		                use_queues_flag);
 
-		kernel_set_args(program_indirect_subsurface(),
+		kernel_set_args(program_split(ustring("path_trace_indirect_subsurface")),
 		                0,
 		                kgbuffer,
 		                d_data,
@@ -802,7 +774,7 @@ public:
 		                Queue_index,
 		                dQueue_size);
 
-		kernel_set_args(program_buffer_update(),
+		kernel_set_args(program_split(ustring("path_trace_buffer_update")),
 		                0,
 		                kgbuffer,
 		                d_data,
@@ -839,7 +811,7 @@ public:
 #endif
 		                num_parallel_samples);
 
-		kernel_set_args(program_sum_all_radiance(),
+		kernel_set_args(program_split(ustring("path_trace_sum_all_radiance")),
 		                0,
 		                d_data,
 		                d_buffer,
@@ -858,8 +830,7 @@ public:
 #define ENQUEUE_SPLIT_KERNEL(kernelName, globalSize, localSize) \
 		{ \
 			ciErr = clEnqueueNDRangeKernel(cqCommandQueue, \
-			                               GLUE(program_, \
-			                                    kernelName)(), \
+			                               program_split(ustring("path_trace_" #kernelName)), \
 			                               2, \
 			                               NULL, \
 			                               globalSize, \

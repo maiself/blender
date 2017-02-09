@@ -14,6 +14,7 @@ set(INC_SYS
 set(SRC
 	kernels/cpu/kernel.cpp
 	kernels/opencl/kernel.cl
+	kernels/opencl/kernel_split.cl
 	kernels/opencl/kernel_data_init.cl
 	kernels/opencl/kernel_queue_enqueue.cl
 	kernels/opencl/kernel_scene_intersect.cl
@@ -368,6 +369,7 @@ endif()
 #delayed_install(${CMAKE_CURRENT_SOURCE_DIR} "${KERNEL_PREPROCESSED}" ${CYCLES_INSTALL_PATH}/kernel)
 
 delayed_install(${CMAKE_CURRENT_SOURCE_DIR} "kernels/opencl/kernel.cl" ${CYCLES_INSTALL_PATH}/kernel/kernels/opencl)
+delayed_install(${CMAKE_CURRENT_SOURCE_DIR} "kernels/opencl/kernel_split.cl" ${CYCLES_INSTALL_PATH}/kernel/kernels/opencl)
 delayed_install(${CMAKE_CURRENT_SOURCE_DIR} "kernels/opencl/kernel_data_init.cl" ${CYCLES_INSTALL_PATH}/kernel/kernels/opencl)
 delayed_install(${CMAKE_CURRENT_SOURCE_DIR} "kernels/opencl/kernel_queue_enqueue.cl" ${CYCLES_INSTALL_PATH}/kernel/kernels/opencl)
 delayed_install(${CMAKE_CURRENT_SOURCE_DIR} "kernels/opencl/kernel_scene_intersect.cl" ${CYCLES_INSTALL_PATH}/kernel/kernels/opencl)

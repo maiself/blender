@@ -195,7 +195,7 @@ public:
 			build_options += " -D__NO_PATCH_EVAL__";
 		}
 		if(!use_transparent) {
-			build_options += " -D__NO_TRANSPARENT__";
+			//build_options += " -D__NO_TRANSPARENT__";
 		}
 		return build_options;
 	}
